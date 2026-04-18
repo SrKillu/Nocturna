@@ -381,3 +381,29 @@ metadata_tests:
             * app/auth/callback/route.ts: exchangeCodeForSession + validateSession() + fallback a /login?error=<code> con logs estructurados; default next=/dashboard.
             * NO se manipulan tokens manualmente — Supabase SSR gestiona cookies.
           Verificación: typecheck limpio · npm test → 44 passed | 13 skipped · /login responde 200 con banner de error y formulario accesible.
+
+  - task: "PROMPT FRONTEND 3 — Dashboard principal"
+    implemented: true
+    working: true
+    file: "app/(dashboard)/dashboard/page.tsx, lib/services/dashboard.service.ts, components/dashboard/*, lib/utils/date.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Dashboard principal como Server Component con agregador único:
+            * lib/services/dashboard.service.ts: getDashboardOverview(ctx) devuelve {role, displayName, institutionName, kpis, courses, tasks, activity}. Una sola round-trip coordinada vía Promise.all. RLS garantiza tenant-scoping. Fallback emptyOverview() cuando Supabase no está configurado o hay migraciones pendientes.
+            * Queries role-aware (student → enrollments + own submission status; teacher → cursos propios + pendientes por revisar; admin → tenant completo).
+            * KPIs: Cursos activos, Tareas/Entregas pendientes, Entregas 7d, Calificadas 7d (count:exact head:true, cheap).
+            * Componentes en components/dashboard/:
+                - welcome-card: saludo dinámico (mañana/tarde/noche) + rol + institución, gradient sutil.
+                - kpi-grid: 4 KPIs responsive (2 col mobile, 4 col xl).
+                - courses-card: top-5 cursos con descripción + CTA "Abrir".
+                - tasks-card: top-5 tareas ordenadas por due_date; badges de estado (Pendiente/Enviada/Calificada para student; "N por revisar" para staff).
+                - activity-card: timeline con iconografía por acción (grade.upsert, file.*, session.invalidate, login_success, logout).
+            * lib/utils/date.ts: formatRelativeDate con Intl.RelativeTimeFormat (es) + salto a fecha absoluta >14d.
+            * app/(dashboard)/dashboard/page.tsx: dynamic='force-dynamic' (datos frescos), try/catch con fallback a empty para no derribar el shell si falla una subquery.
+            * SIN fetch a /api/* desde Server Components (pattern correcto en Next.js 14: llamar servicios directamente).
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /dashboard → 307 a login en modo placeholder.
