@@ -7,7 +7,7 @@ export default async function AdminUsersPage() {
   const supabase = createClient();
   const { data } = await supabase
     .from('profiles')
-    .select('id, email, full_name, role, created_at')
+    .select('id, email, full_name, role, is_active, created_at')
     .order('created_at', { ascending: false });
   return <AdminUsersClient initialUsers={(data ?? []) as UserRow[]} />;
 }
@@ -17,5 +17,6 @@ export interface UserRow {
   email: string;
   full_name: string | null;
   role: 'student' | 'teacher' | 'admin' | 'super_admin';
+  is_active: boolean;
   created_at: string;
 }

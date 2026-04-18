@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -11,13 +11,47 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Moon } from 'lucide-react';
 
+const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
+  not_authenticated: {
+    title: 'Inicia sesión para continuar',
+    description: 'Tu sesión expiró o aún no has iniciado sesión.',
+  },
+  invalid_profile: {
+    title: 'Perfil no válido',
+    description: 'Tu usuario no tiene un perfil asociado. Contacta al administrador de tu institución.',
+  },
+  inactive_account: {
+    title: 'Cuenta desactivada',
+    description: 'Tu cuenta fue desactivada. Contacta al administrador de tu institución.',
+  },
+  missing_tenant: {
+    title: 'Sin institución asignada',
+    description: 'Tu usuario no está vinculado a ninguna institución activa.',
+  },
+  session_expired: {
+    title: 'Sesión expirada',
+    description: 'Por seguridad, vuelve a iniciar sesión.',
+  },
+  invalid_callback: {
+    title: 'Enlace inválido',
+    description: 'El enlace usado para iniciar sesión no es válido o expiró.',
+  },
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') ?? '/dashboard';
+  const errorCode = searchParams.get('error');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (!errorCode) return;
+    const info = ERROR_MESSAGES[errorCode];
+    if (info) toast.error(info.title, { description: info.description });
+  }, [errorCode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +77,14 @@ export default function LoginPage() {
           </span>
           Nocturna
         </Link>
+
+        {errorCode && ERROR_MESSAGES[errorCode] && (
+          <div className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <p className="font-medium">{ERROR_MESSAGES[errorCode].title}</p>
+            <p className="text-destructive/80">{ERROR_MESSAGES[errorCode].description}</p>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Iniciar sesión</CardTitle>
