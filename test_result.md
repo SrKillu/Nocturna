@@ -741,4 +741,50 @@ metadata_tests:
 
           PENDIENTE POR PARTE DEL USUARIO:
             * Ejecutar supabase/migrations/0011_courses_insert_staff.sql en su SQL Editor.
+
+  - task: "Fase B · Módulo 1 (Profesores) + Módulo 2 (Inscripción por email)"
+    implemented: true
+    working: "NA"
+    file: "lib/services/teachers.service.ts, lib/services/enrollments.service.ts, app/api/admin/teachers/route.ts, app/api/courses/[id]/enroll/route.ts, app/(dashboard)/admin/teachers/page.tsx, components/admin/create-teacher-dialog.tsx, components/courses/enroll-student-panel.tsx, lib/rbac/nav.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Módulo 1 — Gestión de profesores (admin)
+            * lib/services/teachers.service.ts · createTeacher/listTeachers. Reusa
+              inviteUserToInstitution para crear auth user + profile atómicamente con
+              role='teacher' + institution_id del caller. Password opcional: si no se envía,
+              genera temporal y la retorna una sola vez (admin la copia al profesor).
+            * GET/POST /api/admin/teachers con requireRole(['admin','super_admin']).
+            * /admin/teachers page · lista con avatares/iniciales + courses_count por teacher +
+              estado activo. CreateTeacherDialog muestra panel de credenciales una sola vez tras
+              crear, con botones "copiar email" y "copiar password".
+            * Nav · añadido link "Profesores" (icon Users2) en grupo Gestión, solo admin.
+
+          Módulo 2 — Inscripción por email
+            * lib/services/enrollments.service.ts · enrollStudentByEmail + unenrollStudent.
+              Validaciones: curso pertenece al tenant, caller es admin o teacher del curso,
+              email existe en el mismo institution, role=student, is_active, sin duplicar.
+            * POST /api/courses/[id]/enroll dual-shape: acepta { email } o { studentId } (legacy).
+            * DELETE /api/courses/[id]/enroll con { studentId } o ?studentId=.
+            * components/courses/enroll-student-panel.tsx · form + lista + botón quitar con confirm.
+              Integrado en tab "Personas" del course detail. Visibility controlada por canManage
+              (admin/super_admin siempre; teacher solo si detail.teacher_id === ctx.userId).
+
+          Verificaciones:
+            * typecheck ✅ · tests unitarios 44/44 ✅ · lint clean.
+            * Nada del flow existente tocado (login/courses/tasks siguen igual).
+            * Sin SQL nuevo requerido. Requiere el SQL `0015_tasks_rls_staff.sql` pendiente
+              (el usuario aún no lo aplicó; los logs siguen mostrando `POST /api/tasks 500` por
+              esa razón — no relacionado con este módulo).
+
+          PENDIENTE:
+            * Módulo 3 (Chat) — tabla messages + endpoints + polling UI.
+            * Módulo 4 (Materiales) — bucket + tabla materials + UI upload/download.
+            * Módulo 5 (Notas) — tabla final_grades + UI teacher/student.
+            * Módulo 6 (UX Curso tabs) — agregar tabs Materiales, Chat, Notas.
+            * Módulo 7 (QR) — teacher_invites + student_invites + pantallas /join.
             * Tras eso, los 6 escenarios legítimos deben devolver 201 (curso creado).

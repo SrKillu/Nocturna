@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EnrollButton } from '@/components/courses/enroll-button';
+import { EnrollStudentPanel } from '@/components/courses/enroll-student-panel';
 import { CourseStream } from '@/components/courses/course-stream';
 import { CoursePeople } from '@/components/courses/course-people';
 import { CourseTasksTab } from '@/components/courses/course-tasks-tab';
@@ -143,6 +144,17 @@ export default async function CourseDetailPage({
 
         <TabsContent value="people" className="space-y-4">
           <CoursePeople people={people} />
+          <EnrollStudentPanel
+            courseId={detail.id}
+            canManage={
+              ctx.role === 'admin' ||
+              ctx.role === 'super_admin' ||
+              (ctx.role === 'teacher' && detail.teacher_id === ctx.userId)
+            }
+            enrolled={people
+              .filter((p) => p.role === 'student')
+              .map((p) => ({ id: p.id, email: p.email, full_name: p.full_name }))}
+          />
         </TabsContent>
       </Tabs>
     </div>

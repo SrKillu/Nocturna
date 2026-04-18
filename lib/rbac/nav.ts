@@ -6,6 +6,7 @@ import {
   FileUp,
   GraduationCap,
   ShieldCheck,
+  Users2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,6 +33,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/tasks',        label: 'Tareas',         icon: ClipboardList },
   { href: '/submissions',  label: 'Entregas',       icon: FileUp },
   { href: '/grades',       label: 'Calificaciones', icon: GraduationCap },
+  {
+    href: '/admin/teachers',
+    label: 'Profesores',
+    icon: Users2,
+    roles: ['admin', 'super_admin'],
+  },
   {
     href: '/admin',
     label: 'Administración',
