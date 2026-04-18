@@ -303,3 +303,36 @@ agent_communication:
       - working: "NA"
         agent: "main"
         comment: "Best-effort insert con institution_id desde DEFAULT auth.institution_id(). Usado en user.invite y file.upload_url.issued. grade.upsert ya lo hace desde el RPC."
+
+  - task: "PROMPT 8 — QA automatizado (suite de seguridad)"
+    implemented: true
+    working: true
+    file: "vitest.config.ts, tests/unit/*.test.ts, tests/e2e/*.test.ts, tests/helpers/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Suite híbrida implementada con Vitest 2.1:
+            * Unit tier (44 tests, 5 archivos, corre sin red, todo PASS):
+                - T11 rate-limit (sliding window, ban exponencial, scope IP/user)
+                - T12 CSRF (double-submit, origin/referer, echo-exempt, constant-time)
+                - T18 file-magic (PDF/PNG/JPEG/WEBP/DOCX/text UTF-8, spoof detection)
+                - middleware-auth (10 tests: unauth API/page, claims, session_version, role mismatch, admin guard, CSRF integrado)
+                - race-conditions (mapping P0002/42501/22023 → ApiError, upsert concurrente simulado)
+            * E2E tier (13 tests, 4 archivos, auto-skip con creds placeholder):
+                - T15 rls-isolation (cross-tenant SELECT/INSERT/audit_log negados)
+                - T17 jwt-invalidation (bump_session_version + JWT claim verification)
+                - T16 audit-log (grade.upsert escribe fila, institution_id no spoofable)
+                - T15b permissions (student no crea cursos, teacher no dueño no califica, admin sí)
+          Scripts: npm test · npm run test:unit · npm run test:e2e · npm run test:watch · npm run test:security.
+          Helpers: `hasRealSupabase()` gate, `seedTenant/teardownTenant`, `mockRequest`, `server-only` shim.
+          Estado actual sin credenciales reales: 44 passed · 13 skipped · typecheck limpio.
+
+metadata_tests:
+  last_run: "npm test"
+  last_result: "44 passed | 13 skipped (57 total)"
+  unit_files: 5
+  e2e_files: 4
