@@ -428,3 +428,24 @@ metadata_tests:
             * components/courses/create-course-dialog.tsx (client): shadcn Dialog + react-hook-form + Zod (createCourseSchema); Select de profesor con fallback UNASSIGNED; apiFetch() con CSRF automático; toast + router.refresh() tras éxito; reset en cancel/close.
             * components/courses/enroll-button.tsx (client): POST /api/courses/:id/enroll con loading + toast + refresh.
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /courses y /courses/[id] → 307 a login en modo placeholder (correcto).
+
+  - task: "PROMPT FRONTEND 5 — Tareas (listado + filtro + detalle + crear)"
+    implemented: true
+    working: true
+    file: "app/(dashboard)/tasks/page.tsx, app/(dashboard)/tasks/[id]/page.tsx, app/api/tasks/[id]/route.ts, lib/services/tasks.service.ts, components/tasks/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Módulo de Tareas completo:
+            * lib/services/tasks.service.ts: añadido listAllTasks(ctx, {courseId?}) role-aware (student→enrolled, teacher→own courses, admin→tenant) y getTaskDetail(ctx, id) con conteos submission_count/submitted_count/graded_count + own_submission para student + can_edit.
+            * app/(dashboard)/tasks/page.tsx (Server Component): PageHeader con CTA "Crear tarea" (teacher/admin), TaskFilterBar, lista con TaskListRow, EmptyModule. Filtro vía ?courseId= en URL (shareable).
+            * app/(dashboard)/tasks/[id]/page.tsx: generateMetadata dinámico; 4 MetaCards (Curso linkeado/Entrega/Entregas/Calificadas); tarjeta "Tu entrega" para student; sección enunciado con whitespace-pre-wrap; notFound() si RLS filtra.
+            * app/api/tasks/[id]/route.ts (nuevo): GET para uso cliente; 404 si no visible.
+            * components/tasks/task-filter-bar.tsx (client): Select que hace router.push con ?courseId= (URL como estado).
+            * components/tasks/task-list-row.tsx: fila con icono, curso, fecha relativa, max score, badge role-aware (Pendiente/Enviada/Calificada/Tarde para student; "N por revisar" para staff).
+            * components/tasks/create-task-dialog.tsx (client): Dialog + react-hook-form + Zod local (acepta datetime-local, convierte a ISO); Select de curso filtrado (teacher → solo sus cursos); input maxScore numérico; toast + refresh.
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /tasks y /tasks/[id] → 307 a login en modo placeholder.
