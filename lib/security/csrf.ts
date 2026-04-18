@@ -76,12 +76,34 @@ function requestHost(request: NextRequest): string {
   return request.nextUrl.host;
 }
 
+/**
+ * Trusted host allowlist. We consider a request same-origin if its Origin/
+ * Referer matches any of:
+ *   1. The resolved request host (x-forwarded-host → host → nextUrl.host).
+ *   2. The host of NEXT_PUBLIC_BASE_URL (canonical public URL). This covers
+ *      deployments where the edge proxy rewrites the upstream host header
+ *      (Emergent preview, some CDN configurations).
+ */
+function trustedHosts(request: NextRequest): Set<string> {
+  const hosts = new Set<string>();
+  hosts.add(requestHost(request));
+  const publicUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  if (publicUrl) {
+    try {
+      hosts.add(new URL(publicUrl).host);
+    } catch {
+      /* ignore malformed env */
+    }
+  }
+  return hosts;
+}
+
 function sameOrigin(request: NextRequest): boolean {
-  const expected = requestHost(request);
+  const expected = trustedHosts(request);
   const originHost = hostFromHeader(request.headers.get('origin'));
-  if (originHost) return originHost === expected;
+  if (originHost) return expected.has(originHost);
   const refererHost = hostFromHeader(request.headers.get('referer'));
-  if (refererHost) return refererHost === expected;
+  if (refererHost) return expected.has(refererHost);
   // No Origin/Referer (some non-browser clients). We refuse mutating ops from them
   // unless they provide the echo cookie, which is only obtainable same-origin.
   return false;

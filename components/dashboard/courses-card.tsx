@@ -8,6 +8,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { accentFor, courseInitials } from '@/lib/ui/course-accents';
+import { cn } from '@/lib/utils';
 import type { CoursePreview } from '@/lib/services/dashboard.service';
 
 interface CoursesCardProps {
@@ -19,7 +21,7 @@ export function CoursesCard({ courses }: CoursesCardProps) {
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div>
-          <CardTitle className="text-base">Cursos activos</CardTitle>
+          <CardTitle className="text-base">Tus cursos</CardTitle>
           <CardDescription>Accesos rápidos a los cursos que te conciernen.</CardDescription>
         </div>
         <Button asChild variant="ghost" size="sm" className="text-xs">
@@ -36,27 +38,41 @@ export function CoursesCard({ courses }: CoursesCardProps) {
             description="Los cursos que se creen en tu institución aparecerán aquí."
           />
         ) : (
-          <ul className="divide-y">
-            {courses.map((course) => (
-              <li key={course.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <BookOpen className="h-4 w-4" aria-hidden />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{course.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {course.description ?? 'Sin descripción'}
-                  </p>
-                </div>
-                <Link
-                  href={`/courses?id=${course.id}`}
-                  aria-label={`Abrir curso ${course.name}`}
-                  className="shrink-0 text-xs font-medium text-primary hover:underline"
-                >
-                  Abrir
-                </Link>
-              </li>
-            ))}
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {courses.map((course) => {
+              const accent = accentFor(course.id);
+              return (
+                <li key={course.id}>
+                  <Link
+                    href={`/courses/${course.id}`}
+                    aria-label={`Abrir curso ${course.name}`}
+                    className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                  >
+                    <span
+                      className={cn(
+                        'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-semibold text-white',
+                        accent.from,
+                        accent.to
+                      )}
+                    >
+                      {courseInitials(course.name)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium group-hover:text-primary">
+                        {course.name}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {course.description ?? 'Sin descripción'}
+                      </p>
+                    </div>
+                    <ArrowRight
+                      aria-hidden
+                      className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                    />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>

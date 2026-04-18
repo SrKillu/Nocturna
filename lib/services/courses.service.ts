@@ -234,3 +234,151 @@ export async function getCourseDetail(
   };
 }
 
+export interface CoursePerson {
+  id: string;
+  full_name: string | null;
+  email: string;
+  role: 'teacher' | 'student';
+  enrolled_at: string | null;
+}
+
+/**
+ * Returns the teacher (if any) plus every enrolled student for a course.
+ * Used by the /courses/[id] "Personas" tab. RLS scopes the call to the
+ * caller's tenant automatically.
+ */
+export async function listCoursePeople(
+  ctx: AuthenticatedContext,
+  courseId: string
+): Promise<CoursePerson[]> {
+  const supabase = createClient();
+
+  const { data: course } = await supabase
+    .from('courses')
+    .select(
+      'teacher_id, teacher:profiles!courses_teacher_id_fkey(id, full_name, email)'
+    )
+    .eq('id', courseId)
+    .maybeSingle();
+
+  const { data: enrollments } = await supabase
+    .from('enrollments')
+    .select(
+      'enrolled_at, student:profiles!enrollments_student_id_fkey(id, full_name, email)'
+    )
+    .eq('course_id', courseId)
+    .order('enrolled_at', { ascending: true });
+
+  const people: CoursePerson[] = [];
+  const typedCourse = course as unknown as {
+    teacher_id: string | null;
+    teacher: { id: string; full_name: string | null; email: string } | null;
+  } | null;
+  if (typedCourse?.teacher) {
+    people.push({
+      id: typedCourse.teacher.id,
+      full_name: typedCourse.teacher.full_name,
+      email: typedCourse.teacher.email,
+      role: 'teacher',
+      enrolled_at: null,
+    });
+  }
+  const typedEnrollments = (enrollments ?? []) as unknown as Array<{
+    enrolled_at: string;
+    student: { id: string; full_name: string | null; email: string } | null;
+  }>;
+  for (const e of typedEnrollments) {
+    if (!e.student) continue;
+    people.push({
+      id: e.student.id,
+      full_name: e.student.full_name,
+      email: e.student.email,
+      role: 'student',
+      enrolled_at: e.enrolled_at,
+    });
+  }
+  return people;
+}
+
+export interface CourseActivityItem {
+  id: string;
+  kind: 'task_created' | 'submission' | 'grade';
+  title: string;
+  subtitle: string | null;
+  at: string;
+}
+
+/**
+ * Lightweight stream of activity for the course detail page.
+ * Aggregates the 3 events users care about: tasks created, submissions
+ * received, grades posted. Newest first, capped at 20 items.
+ */
+export async function listCourseActivity(
+  ctx: AuthenticatedContext,
+  courseId: string
+): Promise<CourseActivityItem[]> {
+  const supabase = createClient();
+  const [tasksRes, subsRes, gradesRes] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('id, title, created_at')
+      .eq('course_id', courseId)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('submissions')
+      .select('id, submitted_at, task:tasks!inner(title, course_id), student:profiles!submissions_student_id_fkey(full_name, email)')
+      .eq('task.course_id', courseId)
+      .order('submitted_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('grades')
+      .select('id, score, graded_at, submission:submissions!inner(task:tasks!inner(title, course_id), student:profiles!submissions_student_id_fkey(full_name))')
+      .eq('submission.task.course_id', courseId)
+      .order('graded_at', { ascending: false })
+      .limit(10),
+  ]);
+
+  const items: CourseActivityItem[] = [];
+  for (const t of tasksRes.data ?? []) {
+    items.push({
+      id: `task:${t.id}`,
+      kind: 'task_created',
+      title: `Nueva tarea \u2014 ${t.title}`,
+      subtitle: null,
+      at: t.created_at as string,
+    });
+  }
+  const subs = (subsRes.data ?? []) as unknown as Array<{
+    id: string;
+    submitted_at: string;
+    task: { title: string } | null;
+    student: { full_name: string | null; email: string } | null;
+  }>;
+  for (const s of subs) {
+    items.push({
+      id: `sub:${s.id}`,
+      kind: 'submission',
+      title: `Entrega \u2014 ${s.task?.title ?? ''}`,
+      subtitle: s.student?.full_name ?? s.student?.email ?? null,
+      at: s.submitted_at,
+    });
+  }
+  const grades = (gradesRes.data ?? []) as unknown as Array<{
+    id: string;
+    score: number;
+    graded_at: string;
+    submission: { task: { title: string } | null; student: { full_name: string | null } | null } | null;
+  }>;
+  for (const g of grades) {
+    items.push({
+      id: `grade:${g.id}`,
+      kind: 'grade',
+      title: `Calificaci\u00f3n \u2014 ${g.submission?.task?.title ?? ''}`,
+      subtitle: `${g.submission?.student?.full_name ?? ''} \u00b7 ${g.score} pts`,
+      at: g.graded_at,
+    });
+  }
+  items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  return items.slice(0, 20);
+}

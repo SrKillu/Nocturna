@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -13,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Globe, LogOut, Menu } from 'lucide-react';
+import { Globe, LogOut, Menu, Sparkles } from 'lucide-react';
 import type { AppShellUser } from '@/components/layout/app-shell';
 
 interface TopbarProps {
@@ -29,10 +31,29 @@ function getInitials(user: AppShellUser): string {
   return source.slice(0, 2).toUpperCase();
 }
 
+const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
+  { match: /^\/dashboard/,    title: 'Panel' },
+  { match: /^\/courses\/[^/]+/, title: 'Curso' },
+  { match: /^\/courses/,      title: 'Cursos' },
+  { match: /^\/tasks\/[^/]+/, title: 'Tarea' },
+  { match: /^\/tasks/,        title: 'Tareas' },
+  { match: /^\/submissions/,  title: 'Entregas' },
+  { match: /^\/grades/,       title: 'Calificaciones' },
+  { match: /^\/admin/,        title: 'Administración' },
+];
+
+function resolveTitle(pathname: string): string {
+  for (const row of PAGE_TITLES) if (row.match.test(pathname)) return row.title;
+  return 'Nocturna';
+}
+
 export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [busy, setBusy] = useState(false);
   const displayName = user.fullName?.trim() || user.email.split('@')[0];
+  const title = resolveTitle(pathname);
+  const canCreate = user.role !== 'student';
 
   async function logout(scope: 'local' | 'global') {
     if (busy) return;
@@ -54,7 +75,7 @@ export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur md:px-8">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <Button
           type="button"
           size="icon"
@@ -65,10 +86,24 @@ export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <span className="text-sm text-muted-foreground">Panel</span>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground md:inline">
+            Nocturna
+          </span>
+          <span aria-hidden className="hidden text-muted-foreground/50 md:inline">/</span>
+          <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
+        {canCreate ? (
+          <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+            <Link href={user.role === 'teacher' ? '/tasks' : '/courses'}>
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              {user.role === 'teacher' ? 'Nueva tarea' : 'Nuevo curso'}
+            </Link>
+          </Button>
+        ) : null}
         <div className="hidden text-right md:block">
           <p className="text-sm font-medium leading-none">{displayName}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>

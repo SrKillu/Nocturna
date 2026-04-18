@@ -545,3 +545,35 @@ metadata_tests:
             * STS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy sin cambios.
           
           Verificación: curl -I muestra el header correcto; typecheck ✅; tests 44 passed | 13 skipped ✅.
+
+  - task: "Redesign UI: Teams + Classroom + SaaS premium"
+    implemented: true
+    working: true
+    file: "tailwind.config.js, lib/ui/course-accents.ts, components/courses/*, components/layout/*, components/dashboard/courses-card.tsx, lib/rbac/nav.ts, lib/security/csrf.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Rediseño completo + dos bugs críticos descubiertos y arreglados:
+          
+          Bug #1 (Tailwind): content glob era ['./**/*.{js,jsx}'] → NO escaneaba .tsx, por lo que clases dinámicas de componentes TS no se aplicaban. Añadido ts,tsx al glob en tailwind.config.js → muchos estilos que estaban "rotos" ahora se aplican (se ve claramente en las screenshots).
+          
+          Bug #2 (CSRF): signup real desde el preview devolvía csrf:origin_mismatch porque el ingress de Emergent no siempre forwarda x-forwarded-host. Refactor de sameOrigin() para usar allowlist de trusted hosts: request host + host de NEXT_PUBLIC_BASE_URL. Ahora cualquier origen canónico del preview pasa el check sin relajar seguridad.
+          
+          Redesign (Teams + Classroom + SaaS):
+            * lib/ui/course-accents.ts: 8 acentos deterministas por UUID (FNV-1a hash) con gradientes Tailwind (violet/sky/emerald/rose/amber/fuchsia/cyan/lime) + courseInitials().
+            * components/courses/course-card.tsx: card Classroom-style con hero gradient, iniciales grandes, discos decorativos (pure CSS blur), hover translate-y + ring. Accepts href direct. teacherName + status badge (Activo/Archivado con dot color).
+            * app/(dashboard)/courses/[id]/page.tsx: rework COMPLETO. Hero gradient grande con iniciales 2xl + badge de profesor, meta strip (estudiantes/tareas/fecha creado/matriculado). Tabs shadcn: Novedades (Stream) · Tareas · Personas.
+            * components/courses/course-stream.tsx: timeline vertical con connector line + dots coloreados por tipo (task_created violet, submission sky, grade emerald). Fecha relativa.
+            * components/courses/course-people.tsx: dos secciones separadas (Profesor·a, Estudiantes) con Avatar + iniciales + email.
+            * components/courses/course-tasks-tab.tsx: lista in-tab con hover state + chevron animado + link a gestión global.
+            * lib/services/courses.service.ts: añadidos listCoursePeople(ctx, id) y listCourseActivity(ctx, id) (aggregation tasks+submissions+grades sorted newest).
+            * lib/rbac/nav.ts: navGroupsForRole() → secciones "Espacio" y "Gestión" (agrupación estilo Teams).
+            * components/layout/sidebar.tsx: Teams-style — secciones con header uppercase, active state con pill primary/10 + barra acento -left-1 inset-y-1.5, iconos coloreados por estado.
+            * components/layout/topbar.tsx: breadcrumb-like "Nocturna / {pageTitle}" dinámico via usePathname; quick action "Nuevo curso/tarea" según rol; avatar + menu limpio.
+            * components/dashboard/courses-card.tsx: mini-hero tiles 2 col con gradient initial + chevron animado.
+          
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · screenshots confirman landing + login con design premium (violet accent, spacing amplio, rounded-xl, sombras suaves, jerarquía tipográfica clara).

@@ -1,22 +1,23 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CalendarClock, ClipboardList, User2, Users } from 'lucide-react';
+import { notFound } from 'next/navigation';
+import { ArrowLeft, CalendarClock, ClipboardList, Target, Users } from 'lucide-react';
 import { requireAuth } from '@/lib/api/auth';
-import { getCourseDetail } from '@/lib/services/courses.service';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
-import { PageHeader } from '@/components/layout/page-header';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  getCourseDetail,
+  listCoursePeople,
+  listCourseActivity,
+} from '@/lib/services/courses.service';
+import { accentFor, courseInitials } from '@/lib/ui/course-accents';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EnrollButton } from '@/components/courses/enroll-button';
-import { formatRelativeDate } from '@/lib/utils/date';
+import { CourseStream } from '@/components/courses/course-stream';
+import { CoursePeople } from '@/components/courses/course-people';
+import { CourseTasksTab } from '@/components/courses/course-tasks-tab';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,107 +38,105 @@ export default async function CourseDetailPage({
   params: { id: string };
 }) {
   const ctx = await requireAuth();
-
   if (!isSupabaseConfigured()) notFound();
 
-  const detail = await getCourseDetail(ctx, params.id);
+  const [detail, people, activity] = await Promise.all([
+    getCourseDetail(ctx, params.id),
+    listCoursePeople(ctx, params.id).catch(() => []),
+    listCourseActivity(ctx, params.id).catch(() => []),
+  ]);
   if (!detail) notFound();
 
-  const canEnroll =
-    ctx.role === 'student' && !detail.is_enrolled;
+  const canEnroll = ctx.role === 'student' && !detail.is_enrolled;
+  const accent = accentFor(detail.id);
+  const initials = courseInitials(detail.name);
 
   return (
-    <>
-      <div>
-        <Button asChild variant="ghost" size="sm" className="mb-2 h-auto px-2 text-xs text-muted-foreground">
-          <Link href="/courses">
-            <ArrowLeft className="mr-1 h-3 w-3" /> Volver a cursos
-          </Link>
-        </Button>
-        <PageHeader
-          title={detail.name}
-          description={detail.description ?? 'Sin descripción.'}
-          actions={canEnroll ? <EnrollButton courseId={detail.id} /> : null}
-        />
-      </div>
+    <div className="space-y-6">
+      {/* Back link */}
+      <Button asChild variant="ghost" size="sm" className="-ml-2 h-auto px-2 text-xs text-muted-foreground">
+        <Link href="/courses">
+          <ArrowLeft className="mr-1 h-3 w-3" /> Volver a cursos
+        </Link>
+      </Button>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <MetaCard
-          icon={<User2 className="h-4 w-4" />}
-          label="Profesor"
-          value={
-            detail.teacher
-              ? detail.teacher.full_name ?? detail.teacher.email
-              : 'Sin asignar'
-          }
-        />
-        <MetaCard
-          icon={<Users className="h-4 w-4" />}
-          label="Estudiantes"
-          value={String(detail.enrollment_count)}
-        />
-        <MetaCard
-          icon={<ClipboardList className="h-4 w-4" />}
-          label="Tareas"
-          value={String(detail.task_count)}
-        />
-      </section>
+      {/* Classroom-style hero */}
+      <header
+        className={cn(
+          'relative overflow-hidden rounded-2xl bg-gradient-to-br px-6 py-8 text-white shadow-sm sm:px-10 sm:py-10',
+          accent.from,
+          accent.to
+        )}
+      >
+        <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+        <span aria-hidden className="pointer-events-none absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-black/15 blur-2xl" />
+        <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-start gap-5">
+            <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl font-semibold backdrop-blur-sm">
+              {initials}
+            </span>
+            <div className="min-w-0 space-y-2">
+              <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/25">
+                {detail.teacher
+                  ? `Prof. ${detail.teacher.full_name ?? detail.teacher.email}`
+                  : 'Sin profesor asignado'}
+              </Badge>
+              <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">{detail.name}</h1>
+              <p className="max-w-2xl text-sm text-white/85">
+                {detail.description ?? 'Sin descripción.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canEnroll ? <EnrollButton courseId={detail.id} /> : null}
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Tareas del curso</CardTitle>
-          <CardDescription>
-            Listado ordenado por fecha de entrega. Las tareas se gestionarán desde el módulo
-            correspondiente.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {detail.tasks.length === 0 ? (
-            <p className="rounded-md border border-dashed bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              Aún no hay tareas para este curso.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {detail.tasks.map((t) => (
-                <li key={t.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{t.title}</p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarClock className="h-3 w-3" aria-hidden />
-                      {formatRelativeDate(t.due_date)}
-                    </p>
-                  </div>
-                  <Badge variant="outline">Max. {t.max_score}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </>
-  );
-}
+        {/* Meta strip */}
+        <div className="relative z-10 mt-6 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/15 pt-4 text-xs text-white/90">
+          <span className="inline-flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5" /> {detail.enrollment_count} estudiantes
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <ClipboardList className="h-3.5 w-3.5" /> {detail.task_count} tareas
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Target className="h-3.5 w-3.5" />
+            Creado{' '}
+            {new Date(detail.created_at).toLocaleDateString('es', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </span>
+          {detail.is_enrolled ? (
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarClock className="h-3.5 w-3.5" /> Matriculado·a
+            </span>
+          ) : null}
+        </div>
+      </header>
 
-function MetaCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {label}
-        </CardTitle>
-        <span className="rounded-md bg-muted p-1.5 text-muted-foreground">{icon}</span>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <p className="truncate text-xl font-semibold">{value}</p>
-      </CardContent>
-    </Card>
+      {/* Tabs — Classroom style */}
+      <Tabs defaultValue="stream" className="space-y-4">
+        <TabsList className="w-full justify-start gap-1 bg-card">
+          <TabsTrigger value="stream">Novedades</TabsTrigger>
+          <TabsTrigger value="tasks">Tareas</TabsTrigger>
+          <TabsTrigger value="people">Personas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stream" className="space-y-4">
+          <CourseStream items={activity} />
+        </TabsContent>
+
+        <TabsContent value="tasks" className="space-y-4">
+          <CourseTasksTab tasks={detail.tasks} courseId={detail.id} role={ctx.role} />
+        </TabsContent>
+
+        <TabsContent value="people" className="space-y-4">
+          <CoursePeople people={people} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

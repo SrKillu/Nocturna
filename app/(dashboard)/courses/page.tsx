@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { requireAuth } from '@/lib/api/auth';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import {
@@ -72,14 +71,7 @@ export default async function CoursesPage() {
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
         >
           {courses.map((c) => (
-            <Link
-              key={c.id}
-              href={`/courses/${c.id}`}
-              aria-label={`Abrir curso ${c.name}`}
-              className="rounded-xl transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:-translate-y-0.5"
-            >
-              <CourseCard course={c} />
-            </Link>
+            <CourseCard key={c.id} course={c} href={`/courses/${c.id}`} />
           ))}
         </section>
       )}
