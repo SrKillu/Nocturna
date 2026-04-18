@@ -12,7 +12,8 @@
     "test:unit": "vitest run tests/unit",
     "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
-    "test:security": "vitest run"
+    "test:security": "vitest run",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
