@@ -494,3 +494,26 @@ metadata_tests:
             * components/grades/grade-cell.tsx (client): inline Input numérico (0..max_score) + Textarea feedback + botón Guardar. POST a /api/submissions/:id/grade → RPC grade_submission (upsert + status flip + audit). Validación cliente antes de enviar. toast + router.refresh() tras éxito. Cada celda mantiene su propio loading (rows independientes).
             * components/grades/grade-filter.tsx (client): pair de botones estilo segmented control, URL-first ?pending=1.
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /grades → 307 a login en modo placeholder.
+
+  - task: "PROMPT FRONTEND 8 — UX, Estado y Performance"
+    implemented: true
+    working: true
+    file: "lib/hooks/use-api-swr.ts, lib/hooks/use-mutation.ts, components/skeletons/*, app/(dashboard)/*/loading.tsx, app/(dashboard)/error.tsx, app/(dashboard)/not-found.tsx, app/global-error.tsx, components/courses/create-course-dialog-lazy.tsx, components/tasks/create-task-dialog-lazy.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Capa de UX, caching y performance:
+            * Estado cliente: añadido swr (npm) + jsonFetcher wrapping apiFetch (CSRF echo automático, envelope {data}/{error} normalizado, no retry en error).
+            * lib/hooks/use-api-swr.ts: hook tipado para polling/optimistic client-side (Server Components siguen siendo el primary path; SWR cubre casos específicos sin necesidad de un QueryProvider global).
+            * lib/hooks/use-mutation.ts: wrapper uniforme (POST/PUT/PATCH/DELETE) con apiFetch + toast consistente + router.refresh() opcional + loading state. Elimina 8+ líneas de boilerplate por formulario.
+            * components/skeletons/: DashboardSkeleton (layout-matched, 4 KPIs + 2 cards + activity), CardGridSkeleton, ListSkeleton, TableSkeleton, PageHeaderSkeleton — todos con aria-busy/aria-live="polite".
+            * loading.tsx por ruta: /dashboard, /courses, /tasks, /submissions, /grades, /admin. Next.js usa Suspense boundary automáticamente → skeleton instantáneo en navegación.
+            * app/(dashboard)/error.tsx: client error boundary por route group. Captura cualquier throw en servicios/páginas, muestra card amigable con botón Reintentar + link al panel + error.digest para trazabilidad. Mantiene el shell.
+            * app/(dashboard)/not-found.tsx: 404 dentro del shell autenticado (sidebar intacto).
+            * app/global-error.tsx: fallback HTML standalone para crashes del root layout.
+            * Lazy loading: components/courses/create-course-dialog-lazy.tsx + components/tasks/create-task-dialog-lazy.tsx con next/dynamic({ssr:false}) + loading fallback del trigger. Los bundles de los dialogs (react-hook-form + Zod + shadcn Dialog ≈ 45 kB gz) se cargan solo si el admin/teacher abre el modal. Páginas /courses y /tasks actualizadas para usar las versiones Lazy.
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /login → 200 con form accesible (screenshot verificada).

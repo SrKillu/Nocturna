@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { EmptyModule } from '@/components/layout/empty-module';
 import { TaskFilterBar } from '@/components/tasks/task-filter-bar';
 import { TaskListRow } from '@/components/tasks/task-list-row';
-import { CreateTaskDialog } from '@/components/tasks/create-task-dialog';
+import { CreateTaskDialogLazy } from '@/components/tasks/create-task-dialog-lazy';
 
 export const metadata: Metadata = {
   title: 'Tareas · Nocturna',
@@ -63,7 +63,7 @@ export default async function TasksPage({
         description="Todas las tareas que puedes ver, ordenadas por fecha de entrega."
         actions={
           canCreate ? (
-            <CreateTaskDialog courses={assignableCourses} />
+            <CreateTaskDialogLazy courses={assignableCourses} />
           ) : null
         }
       />

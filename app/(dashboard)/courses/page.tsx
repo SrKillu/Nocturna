@@ -8,7 +8,7 @@ import {
 } from '@/lib/services/courses.service';
 import { PageHeader } from '@/components/layout/page-header';
 import { CourseCard } from '@/components/courses/course-card';
-import { CreateCourseDialog } from '@/components/courses/create-course-dialog';
+import { CreateCourseDialogLazy } from '@/components/courses/create-course-dialog-lazy';
 import { EmptyModule } from '@/components/layout/empty-module';
 
 export const metadata: Metadata = {
@@ -54,7 +54,7 @@ export default async function CoursesPage() {
       <PageHeader
         title="Cursos"
         description="Todos los cursos de tu institución a los que tienes acceso."
-        actions={canCreate ? <CreateCourseDialog teachers={teachers} /> : null}
+        actions={canCreate ? <CreateCourseDialogLazy teachers={teachers} /> : null}
       />
 
       {courses.length === 0 ? (
