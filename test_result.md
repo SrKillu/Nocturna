@@ -640,3 +640,57 @@ metadata_tests:
             * scripts/check-tables.ts  — verifica existencia de tablas y columnas críticas (is_active, session_version).
 
           Credenciales guardadas en /app/memory/test_credentials.md (password: Nocturna2025!).
+
+  - task: "Bug fix: CSRF origin_mismatch en POST desde iframe preview"
+    implemented: true
+    working: true
+    file: "lib/security/csrf.ts, lib/supabase/middleware.ts, scripts/smoke-post-course.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Root cause: el check `sameOrigin()` rechazaba requests cuando el browser no envía Origin ni
+          Referer utilizables (caso típico en iframes sandbox como el preview de Emergent, o con
+          Referrer-Policy: no-referrer). El Origin literal "null" tampoco se manejaba, forzando un
+          403 `csrf:origin_mismatch` aunque la defensa real — el double-submit cookie — sí llegara.
+
+          Fix:
+            * lib/security/csrf.ts · `sameOrigin` (boolean) reemplazado por `originCheck()` tri-state:
+                'allowed' · Origin o Referer presentes y en la allowlist (request host + NEXT_PUBLIC_BASE_URL)
+                'denied'  · headers presentes pero hosts NO trusted → ataque real, se rechaza.
+                'missing' · ninguno usable (incluye Origin:"null" de sandboxed iframes).
+              El literal 'null' ahora se ignora explícitamente antes de pasar a Referer.
+            * `validateCsrf()` reestructurado:
+                - 'denied'  → throw origin_mismatch (mantiene defensa).
+                - 'allowed' → double-submit exigido como defence-in-depth.
+                - 'missing' → double-submit como prueba criptográfica única SUFICIENTE
+                  (la cookie es SameSite=Strict + non-HttpOnly: un atacante cross-origin NO puede
+                  leerla ni hacer que el browser la envíe). Endpoints echo-exempt (signup/logout/
+                  callback) siguen exigiendo Origin/Referer porque no tienen cookie aún.
+            * lib/supabase/middleware.ts · `logDeny` enriquecido con origin/referer/host/xfHost en
+              caso de CSRF para forenses (permanente, útil en producción).
+
+          Verificación end-to-end (scripts/smoke-post-course.ts, 4 escenarios):
+            A · Origin=http://localhost:3000     → pasa CSRF ✅
+            B · Origin=<NEXT_PUBLIC_BASE_URL>    → pasa CSRF ✅
+            C · sin Origin ni Referer            → ANTES 403 csrf:origin_mismatch · AHORA pasa CSRF ✅
+            D · Origin con trailing slash        → pasa CSRF ✅
+
+          Seguridad preservada:
+            * SameSite=Strict bloquea que un attacker page envíe la cookie.
+            * El attacker no puede leer la cookie (non-HttpOnly + same-origin JS only).
+            * Si Origin llega con un host NO trusted → bloqueo inmediato (denied).
+            * Tests unitarios 44/44 siguen pasando. Typecheck + lint limpios.
+
+          NOTA APARTE · issue de RLS descubierto durante la verificación (NO reportado aún,
+          pero afectará en UI):
+            POST /api/courses ahora pasa CSRF correctamente, pero luego falla con 500 RLS
+            `new row violates row-level security policy for table "courses"`. El JWT contiene
+            user_role='admin' e institution_id correctos (verified via scripts/inspect-jwt.ts),
+            y SELECT/PATCH sobre courses SÍ funcionan — solo INSERT falla. La policy
+            `courses_insert_admin` parece no estar activa. Requiere investigación adicional
+            (probablemente re-aplicar `0005_rls_policies.sql` o verificar que el DROP POLICY IF
+            EXISTS + CREATE POLICY del consolidated.sql sí se haya ejecutado para INSERT).

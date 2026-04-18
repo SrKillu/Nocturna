@@ -39,12 +39,10 @@ function cookieHeader(jar: CookieJar) {
   return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
 }
 
-// Node 18 fetch exposes Set-Cookie as single string; use getSetCookie if available
 function extractSetCookies(res: Response): string[] {
-  // @ts-expect-error - getSetCookie exists in undici Headers
-  if (typeof res.headers.getSetCookie === 'function') {
-    // @ts-expect-error
-    return res.headers.getSetCookie();
+  const headers = res.headers as Headers & { getSetCookie?: () => string[] };
+  if (typeof headers.getSetCookie === 'function') {
+    return headers.getSetCookie();
   }
   const raw = res.headers.get('set-cookie');
   return raw ? [raw] : [];

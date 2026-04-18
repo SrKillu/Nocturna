@@ -58,16 +58,25 @@ function clearAuthCookies(request: NextRequest, response: NextResponse): void {
 
 function logDeny(request: NextRequest, reason: string, detail?: string): void {
   // Structured one-liner; easy to grep (`[mw:deny]`) and to forward to an
-  // external log sink later without changing any caller.
-  // eslint-disable-next-line no-console
-  console.warn('[mw:deny]', {
+  // external log sink later without changing any caller. For CSRF failures we
+  // include extra forensic fields (origin/referer/host) because they're the
+  // only way to tell trusted-proxy misconfigurations from real attacks.
+  const payload: Record<string, unknown> = {
     method: request.method,
     path: request.nextUrl.pathname,
     reason,
     detail,
     ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
     ua: request.headers.get('user-agent')?.slice(0, 120) ?? 'n/a',
-  });
+  };
+  if (reason === 'csrf') {
+    payload.origin = request.headers.get('origin') ?? null;
+    payload.referer = request.headers.get('referer') ?? null;
+    payload.host = request.headers.get('host') ?? null;
+    payload.xfHost = request.headers.get('x-forwarded-host') ?? null;
+  }
+  // eslint-disable-next-line no-console
+  console.warn('[mw:deny]', payload);
 }
 
 function redirectToLogin(

@@ -98,15 +98,31 @@ function trustedHosts(request: NextRequest): Set<string> {
   return hosts;
 }
 
-function sameOrigin(request: NextRequest): boolean {
+/**
+ * Three-state same-origin check. Unlike a single boolean, this distinguishes
+ * "no usable Origin/Referer was provided" from "Origin/Referer were provided
+ * but they don't match".
+ *   * 'allowed' : Origin or Referer match the trusted host allowlist.
+ *   * 'denied'  : a header was provided but its host is NOT trusted (attack).
+ *   * 'missing' : neither Origin nor Referer is usable. Legitimate in some
+ *                 sandboxed-iframe or strict-referrer-policy browser contexts
+ *                 (e.g. Emergent preview iframe). Caller falls back to the
+ *                 double-submit cookie, which is the cryptographic same-origin
+ *                 proof (the CSRF cookie is SameSite=Strict, so an attacker
+ *                 page cannot send it; it is non-HttpOnly, so only same-origin
+ *                 JS can read its value to echo into x-csrf-token).
+ */
+function originCheck(request: NextRequest): 'allowed' | 'denied' | 'missing' {
   const expected = trustedHosts(request);
-  const originHost = hostFromHeader(request.headers.get('origin'));
-  if (originHost) return expected.has(originHost);
+  const rawOrigin = request.headers.get('origin');
+  // Browsers send the literal string "null" for Origin in sandboxed iframes,
+  // data: URIs, etc. Treat it as "no origin reported".
+  const originHost =
+    rawOrigin && rawOrigin !== 'null' ? hostFromHeader(rawOrigin) : null;
+  if (originHost) return expected.has(originHost) ? 'allowed' : 'denied';
   const refererHost = hostFromHeader(request.headers.get('referer'));
-  if (refererHost) return expected.has(refererHost);
-  // No Origin/Referer (some non-browser clients). We refuse mutating ops from them
-  // unless they provide the echo cookie, which is only obtainable same-origin.
-  return false;
+  if (refererHost) return expected.has(refererHost) ? 'allowed' : 'denied';
+  return 'missing';
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -125,6 +141,13 @@ export function needsCsrfCheck(request: NextRequest): boolean {
 /**
  * Validates a mutating request. Throws CsrfError on failure. Caller should
  * convert it to an HTTP 403 with the standard error envelope.
+ *
+ * Defence layers:
+ *   * Origin/Referer allowlist (when the browser provides it).
+ *   * Double-submit cookie echo (cryptographic same-origin proof).
+ * At least one MUST succeed. Echo-exempt endpoints require the Origin check
+ * because they cannot rely on the double-submit (no cookie yet / token being
+ * rotated).
  */
 export function validateCsrf(request: NextRequest): void {
   if (!needsCsrfCheck(request)) return;
@@ -132,18 +155,31 @@ export function validateCsrf(request: NextRequest): void {
   const pathname = request.nextUrl.pathname;
   const echoExempt = ECHO_EXEMPT_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  // 1. Same-origin check always runs.
-  if (!sameOrigin(request)) {
+  const origin = originCheck(request);
+
+  // Hard reject when Origin/Referer are provided but not trusted — that is a
+  // genuine cross-site request attempt.
+  if (origin === 'denied') {
     throw new CsrfError('origin_mismatch');
   }
 
-  if (echoExempt) return;
+  // Echo-exempt endpoints (signup/logout/callback) have no double-submit to
+  // fall back on, so they MUST provide a trusted Origin or Referer.
+  if (echoExempt) {
+    if (origin !== 'allowed') {
+      throw new CsrfError('origin_mismatch');
+    }
+    return;
+  }
 
-  // 2. Double-submit cookie echo.
+  // Non-exempt mutating request. Require the double-submit cookie echo.
+  // When origin === 'allowed' we have defence-in-depth; when origin ===
+  // 'missing' (sandboxed iframes, strict referrer policy) the double-submit
+  // is the sole but sufficient proof.
   const cookie = request.cookies.get(CSRF_COOKIE)?.value;
   const header = request.headers.get(CSRF_HEADER);
   if (!cookie || !header) {
-    throw new CsrfError('missing_token');
+    throw new CsrfError(origin === 'missing' ? 'origin_mismatch' : 'missing_token');
   }
   if (!constantTimeEqual(cookie, header)) {
     throw new CsrfError('token_mismatch');
