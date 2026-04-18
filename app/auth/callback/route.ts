@@ -17,9 +17,11 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.clone();
   const code = url.searchParams.get('code');
-  const next = sanitizeNextParam(url.searchParams.get('next'));
+  const next = sanitizeNextParam(url.searchParams.get('next'), '/dashboard');
 
   if (!code) {
+    // eslint-disable-next-line no-console
+    console.warn('[auth:callback] missing_code');
     url.pathname = '/login';
     url.search = '';
     url.searchParams.set('error', 'invalid_callback');
@@ -29,6 +31,8 @@ export async function GET(request: NextRequest) {
   const supabase = createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
+    // eslint-disable-next-line no-console
+    console.warn('[auth:callback] exchange_failed', error.message);
     url.pathname = '/login';
     url.search = '';
     url.searchParams.set('error', 'invalid_callback');
@@ -40,10 +44,12 @@ export async function GET(request: NextRequest) {
     await validateSession();
   } catch (err) {
     await supabase.auth.signOut({ scope: 'local' });
-    const code = err instanceof SessionValidationError ? err.code : 'invalid_profile';
+    const reason = err instanceof SessionValidationError ? err.code : 'invalid_profile';
+    // eslint-disable-next-line no-console
+    console.warn('[auth:callback] session_invalid', reason);
     url.pathname = '/login';
     url.search = '';
-    url.searchParams.set('error', code);
+    url.searchParams.set('error', reason);
     return NextResponse.redirect(url);
   }
 

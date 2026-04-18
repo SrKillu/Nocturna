@@ -360,3 +360,24 @@ metadata_tests:
             * Admin page re-chequea rol server-side (defensa contra deep-link).
             * middleware.ts: isProtectedPage ahora cubre los 6 prefijos flat.
             * Typecheck: 0 errores · Tests: 44 passed | 13 skipped · curl /dashboard, /courses, /admin → 307 redirect a login (correcto en modo placeholder).
+
+  - task: "PROMPT FRONTEND 2 — Autenticación (login + callback pulidos)"
+    implemented: true
+    working: true
+    file: "app/(auth)/layout.tsx, app/(auth)/login/page.tsx, components/auth/login-form.tsx, components/auth/login-alert.tsx, lib/auth/error-map.ts, app/auth/callback/route.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Refactor del flujo de autenticación:
+            * app/(auth)/layout.tsx: shell compartido para /login y /signup, centra el card y redirige a /dashboard si ya hay sesión válida (server-side getUser()).
+            * app/(auth)/login/page.tsx: ahora es Server Component que sanitiza ?next y ?error, renderiza <LoginAlert/> y <LoginForm/>.
+            * components/auth/login-form.tsx: client component con react-hook-form + Zod (loginSchema), validación inline aria-invalid/aria-describedby, estado de carga (Loader2 animado), error global + toast, router.replace(nextPath) + refresh tras éxito.
+            * components/auth/login-alert.tsx: mapping centralizado de códigos (not_authenticated, invalid_profile, inactive_account, missing_tenant, session_expired, invalid_callback) a copy en español.
+            * lib/auth/error-map.ts: traduce errores de Supabase Auth a mensajes seguros (sin enumeración de cuentas, bucket 429/400/422/network).
+            * app/auth/callback/route.ts: exchangeCodeForSession + validateSession() + fallback a /login?error=<code> con logs estructurados; default next=/dashboard.
+            * NO se manipulan tokens manualmente — Supabase SSR gestiona cookies.
+          Verificación: typecheck limpio · npm test → 44 passed | 13 skipped · /login responde 200 con banner de error y formulario accesible.
