@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/api/auth';
 import { DashboardTopbar } from '@/components/dashboard/topbar';
 import { SidebarNav } from '@/components/dashboard/sidebar-nav';
+import { AuthAuditLogger } from '@/components/auth/auth-audit-logger';
+import { SessionRecovery } from '@/components/auth/session-recovery';
 
 export default async function DashboardLayout({
   children,
@@ -43,6 +45,8 @@ export default async function DashboardLayout({
           <DashboardTopbar email={ctx.email} />
           <main className="flex-1 px-6 py-8">{children}</main>
         </div>
+        <AuthAuditLogger />
+        <SessionRecovery />
       </div>
     );
   } catch {

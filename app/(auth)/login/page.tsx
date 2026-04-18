@@ -8,7 +8,14 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Moon } from 'lucide-react';
 
 const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
@@ -38,10 +45,22 @@ const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
   },
 };
 
+function sanitizeNext(raw: string | null): string {
+  if (!raw) return '/dashboard';
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/dashboard';
+  if (/^\/[a-z][a-z0-9+\-.]*:/i.test(raw)) return '/dashboard';
+  if (raw.includes('\\')) return '/dashboard';
+  if (raw === '/login' || raw.startsWith('/login?')) return '/dashboard';
+  return raw;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') ?? '/dashboard';
+  // Accept both the new `next` and the legacy `redirectTo` param.
+  const redirectTo = sanitizeNext(
+    searchParams.get('next') ?? searchParams.get('redirectTo')
+  );
   const errorCode = searchParams.get('error');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');

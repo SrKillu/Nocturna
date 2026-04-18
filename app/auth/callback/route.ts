@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateSession, SessionValidationError } from '@/lib/auth/session';
+import { sanitizeNextParam } from '@/lib/security/next-param';
 
 export const runtime = 'nodejs';
 
@@ -16,8 +17,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.clone();
   const code = url.searchParams.get('code');
-  const nextParam = url.searchParams.get('next');
-  const next = sanitizeNext(nextParam);
+  const next = sanitizeNextParam(url.searchParams.get('next'));
 
   if (!code) {
     url.pathname = '/login';
@@ -50,14 +50,4 @@ export async function GET(request: NextRequest) {
   url.pathname = next;
   url.search = '';
   return NextResponse.redirect(url);
-}
-
-function sanitizeNext(raw: string | null): string {
-  if (!raw) return '/dashboard';
-  // Must be a local path: starts with '/', not '//', no protocol.
-  if (!raw.startsWith('/')) return '/dashboard';
-  if (raw.startsWith('//')) return '/dashboard';
-  if (/^\/[a-z]+:/i.test(raw)) return '/dashboard';
-  if (raw.includes('\\')) return '/dashboard';
-  return raw;
 }
