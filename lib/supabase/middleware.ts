@@ -2,8 +2,14 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { UserRole } from '@/lib/types/database';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { buildCsp, generateNonce } from '@/lib/security/csp';
+import {
+  ensureCsrfCookie,
+  needsCsrfCheck,
+  validateCsrf,
+  CsrfError,
+} from '@/lib/security/csrf';
 
-const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/auth', '/'];
 const PUBLIC_API_PREFIXES = ['/api/health', '/api/auth/signup', '/api/auth/logout'];
 
 function isPublicApi(pathname: string): boolean {
@@ -11,9 +17,19 @@ function isPublicApi(pathname: string): boolean {
 }
 
 /**
- * Wipes every Supabase auth cookie on the given response.
- * Used when the session is structurally broken (no profile, inactive, expired).
+ * Applies the per-request security headers to a response.
+ * (CSP is dynamic because it carries the per-request nonce.)
  */
+function applySecurityHeaders(
+  request: NextRequest,
+  response: NextResponse,
+  nonce: string
+): void {
+  response.headers.set('x-nonce', nonce);
+  response.headers.set('Content-Security-Policy', buildCsp(nonce));
+  ensureCsrfCookie(request, response);
+}
+
 function clearAuthCookies(request: NextRequest, response: NextResponse): void {
   for (const cookie of request.cookies.getAll()) {
     if (cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')) {
@@ -34,16 +50,39 @@ function redirectToLogin(
   url.searchParams.set('error', reason);
   if (redirectTo) url.searchParams.set('redirectTo', redirectTo);
   const res = NextResponse.redirect(url);
-  // Carry over any Set-Cookie headers the caller prepared, then add the clears.
   response.cookies.getAll().forEach((c) => res.cookies.set(c));
   clearAuthCookies(request, res);
   return res;
 }
 
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
-  const response = NextResponse.next({ request: { headers: request.headers } });
+  const nonce = generateNonce();
 
-  // Boot-time safety net: if Supabase env vars are placeholders, skip auth work.
+  // Propagate the nonce into the downstream request so Next.js injects it
+  // into its own <script> tags.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', buildCsp(nonce));
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  applySecurityHeaders(request, response, nonce);
+
+  // 1. CSRF guard on every mutating request.
+  if (needsCsrfCheck(request)) {
+    try {
+      validateCsrf(request);
+    } catch (err) {
+      if (err instanceof CsrfError) {
+        return NextResponse.json(
+          { error: { code: 'FORBIDDEN', message: `csrf:${err.code}` } },
+          { status: 403 }
+        );
+      }
+      throw err;
+    }
+  }
+
+  // 2. Placeholder-mode short-circuit until Supabase credentials are wired up.
   if (!isSupabaseConfigured()) {
     const pathname = request.nextUrl.pathname;
     if (pathname.startsWith('/api') && !pathname.startsWith('/api/health')) {
@@ -78,12 +117,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
         },
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({ name, value, ...options });
-          innerResponse = NextResponse.next({ request: { headers: request.headers } });
+          innerResponse = NextResponse.next({ request: { headers: requestHeaders } });
+          applySecurityHeaders(request, innerResponse, nonce);
           innerResponse.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set({ name, value: '', ...options });
-          innerResponse = NextResponse.next({ request: { headers: request.headers } });
+          innerResponse = NextResponse.next({ request: { headers: requestHeaders } });
+          applySecurityHeaders(request, innerResponse, nonce);
           innerResponse.cookies.set({ name, value: '', ...options });
         },
       },
@@ -104,7 +145,6 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const isAdminApi = pathname.startsWith('/api/admin');
   const isDashboard = pathname.startsWith('/dashboard');
 
-  // Unauthenticated ---------------------------------------------------
   if (!user) {
     if (isApi && !isPublicApi(pathname)) {
       return NextResponse.json(
@@ -118,7 +158,6 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     return innerResponse;
   }
 
-  // Authenticated: claim-shape gate. ----------------------------------
   const authUser = user as { app_metadata?: Record<string, unknown> };
   const appMeta = (authUser.app_metadata ?? {}) as {
     user_role?: UserRole;
@@ -127,9 +166,8 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   };
   const role = appMeta.user_role;
   const institutionId = appMeta.institution_id;
-  const isActive = appMeta.is_active !== false; // undefined defaults to true at this layer; SSR requireAuth will re-check DB.
+  const isActive = appMeta.is_active !== false;
 
-  // Missing role claim -> profile missing -> force logout via cookie wipe.
   if (!role) {
     if (isApi && !isPublicApi(pathname)) {
       return NextResponse.json(
@@ -137,13 +175,10 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
         { status: 403 }
       );
     }
-    if (isDashboard) {
-      return redirectToLogin(request, innerResponse, 'invalid_profile');
-    }
+    if (isDashboard) return redirectToLogin(request, innerResponse, 'invalid_profile');
     return innerResponse;
   }
 
-  // Missing institution_id claim -> inactive or hook rejected -> deny protected access.
   if (!institutionId) {
     if (isApi && !isPublicApi(pathname)) {
       return NextResponse.json(
@@ -161,17 +196,13 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     return innerResponse;
   }
 
-  // Admin API gate -----------------------------------------------------
-  if (isAdminApi) {
-    if (role !== 'admin' && role !== 'super_admin') {
-      return NextResponse.json(
-        { error: { code: 'FORBIDDEN', message: 'Admin role required' } },
-        { status: 403 }
-      );
-    }
+  if (isAdminApi && role !== 'admin' && role !== 'super_admin') {
+    return NextResponse.json(
+      { error: { code: 'FORBIDDEN', message: 'Admin role required' } },
+      { status: 403 }
+    );
   }
 
-  // Logged-in users hitting login/signup should go to dashboard.
   if (pathname === '/login' || pathname === '/signup') {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';

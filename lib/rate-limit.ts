@@ -3,39 +3,38 @@ import { ApiError } from '@/lib/errors';
 import type { NextRequest } from 'next/server';
 
 /**
- * In-memory fixed-window rate limiter.
+ * Sliding-window rate limiter with exponential temp-ban.
  *
- * Trade-offs:
- *   * Works per Next.js process; in a multi-instance deployment each instance
- *     keeps its own counter. For Nocturna's MVP that's acceptable; swap for
- *     Redis/Upstash in production if you scale horizontally.
- *   * Zero dependencies, no cold-start, O(1) per request.
+ *   * `events` keeps timestamps per key and discards anything outside the
+ *     current window on every check (true sliding window).
+ *   * `bans` stores an absolute `blockedUntil` timestamp. Every time a key
+ *     overflows the window its ban duration doubles (2m -> 4m -> ... capped).
+ *
+ * In-memory only. For multi-instance deployments, swap `events`/`bans` for a
+ * Redis-backed store (the public API stays the same).
  */
-interface Bucket {
-  count: number;
-  resetAt: number;
+
+interface EventWindow {
+  hits: number[];
+  violations: number;
+  blockedUntil: number;
 }
 
-const store = new Map<string, Bucket>();
+const store = new Map<string, EventWindow>();
+const MAX_STORE = 4096;
+const BASE_BAN_MS = 2 * 60_000;   // 2 minutes
+const MAX_BAN_MS  = 60 * 60_000;  // 1 hour
 
-function now(): number {
-  return Date.now();
-}
-
-function sweep(current: number): void {
-  // Occasional cleanup to keep the map bounded.
-  if (store.size < 1024) return;
+function sweep(now: number): void {
+  if (store.size < MAX_STORE) return;
   for (const [k, v] of store) {
-    if (v.resetAt < current) store.delete(k);
+    if (v.blockedUntil < now && v.hits.length === 0) store.delete(k);
   }
 }
 
 export interface RateLimitRule {
-  /** Unique endpoint identifier. */
   bucket: string;
-  /** Max requests allowed in the window. */
   limit: number;
-  /** Window size in milliseconds. */
   windowMs: number;
 }
 
@@ -47,44 +46,46 @@ export function clientIp(request: NextRequest): string {
   return 'unknown';
 }
 
-/**
- * Consume one unit from the bucket. Throws ApiError('RATE_LIMITED') on exceed.
- */
 export function enforceRateLimit(rule: RateLimitRule, scopeKey: string): void {
-  const t = now();
-  sweep(t);
+  const now = Date.now();
+  sweep(now);
   const key = `${rule.bucket}:${scopeKey}`;
-  const bucket = store.get(key);
-  if (!bucket || bucket.resetAt < t) {
-    store.set(key, { count: 1, resetAt: t + rule.windowMs });
-    return;
-  }
-  if (bucket.count >= rule.limit) {
+  const state = store.get(key) ?? { hits: [], violations: 0, blockedUntil: 0 };
+
+  if (state.blockedUntil > now) {
+    store.set(key, state);
     throw new ApiError('RATE_LIMITED', 'Too many requests, please try again later');
   }
-  bucket.count += 1;
+
+  const windowStart = now - rule.windowMs;
+  state.hits = state.hits.filter((t) => t > windowStart);
+
+  if (state.hits.length >= rule.limit) {
+    state.violations += 1;
+    const banMs = Math.min(BASE_BAN_MS * 2 ** Math.max(0, state.violations - 1), MAX_BAN_MS);
+    state.blockedUntil = now + banMs;
+    store.set(key, state);
+    throw new ApiError('RATE_LIMITED', 'Too many requests, please try again later');
+  }
+
+  state.hits.push(now);
+  store.set(key, state);
 }
 
-/**
- * Convenience wrapper that combines user + IP keys when a user context is
- * available, or falls back to IP-only for unauthenticated endpoints.
- */
 export function enforceCombinedRateLimit(params: {
   rule: RateLimitRule;
   request: NextRequest;
   userId?: string;
 }): void {
   const ip = clientIp(params.request);
-  if (params.userId) {
-    enforceRateLimit(params.rule, `user:${params.userId}`);
-  }
+  if (params.userId) enforceRateLimit(params.rule, `user:${params.userId}`);
   enforceRateLimit(params.rule, `ip:${ip}`);
 }
 
-// Preset rules --------------------------------------------------------
 export const RATE_LIMITS = {
   adminUserCreate: { bucket: 'admin.users.create', limit: 10, windowMs: 60_000 } satisfies RateLimitRule,
   authSignup:      { bucket: 'auth.signup',        limit: 3,  windowMs: 60_000 } satisfies RateLimitRule,
+  authEvent:       { bucket: 'auth.event',         limit: 30, windowMs: 60_000 } satisfies RateLimitRule,
   fileUpload:      { bucket: 'files.upload',       limit: 30, windowMs: 60_000 } satisfies RateLimitRule,
   fileDownload:    { bucket: 'files.download',     limit: 60, windowMs: 60_000 } satisfies RateLimitRule,
 };
