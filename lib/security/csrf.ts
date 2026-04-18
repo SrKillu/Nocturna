@@ -77,16 +77,28 @@ function requestHost(request: NextRequest): string {
 }
 
 /**
- * Trusted host allowlist. We consider a request same-origin if its Origin/
- * Referer matches any of:
- *   1. The resolved request host (x-forwarded-host → host → nextUrl.host).
- *   2. The host of NEXT_PUBLIC_BASE_URL (canonical public URL). This covers
- *      deployments where the edge proxy rewrites the upstream host header
- *      (Emergent preview, some CDN configurations).
+ * Trusted host allowlist. A request is considered same-origin if its
+ * Origin/Referer host appears here. We include MULTIPLE host sources
+ * because reverse-proxy setups often route traffic through two valid
+ * hostnames at once (e.g. Emergent preview serves both
+ * `nocturna-academic.preview.emergentagent.com` via the public edge AND
+ * `nocturna-academic.cluster-8.preview.emergentcf.cloud` via the upstream
+ * cluster; the browser sees the cluster host in Origin while Next sees
+ * x-forwarded-host = the public one).
+ *
+ * Sources, in order:
+ *   1. Raw `Host` header — what the browser is actually talking to.
+ *   2. `X-Forwarded-Host` — what the edge proxy rewrote upstream to.
+ *   3. `request.nextUrl.host` — Next's resolved host.
+ *   4. Host of NEXT_PUBLIC_BASE_URL — the canonical deployment URL.
  */
 function trustedHosts(request: NextRequest): Set<string> {
   const hosts = new Set<string>();
-  hosts.add(requestHost(request));
+  const rawHost = request.headers.get('host');
+  if (rawHost) hosts.add(rawHost.trim());
+  const xfHost = request.headers.get('x-forwarded-host');
+  if (xfHost) hosts.add(xfHost.trim());
+  hosts.add(request.nextUrl.host);
   const publicUrl = process.env.NEXT_PUBLIC_BASE_URL;
   if (publicUrl) {
     try {

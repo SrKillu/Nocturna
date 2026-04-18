@@ -37,7 +37,13 @@ interface Teacher {
 
 const UNASSIGNED = '__unassigned__';
 
-export function CreateCourseDialog({ teachers }: { teachers: Teacher[] }) {
+export function CreateCourseDialog({
+  teachers,
+  canAssignTeacher = true,
+}: {
+  teachers: Teacher[];
+  canAssignTeacher?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -132,29 +138,37 @@ export function CreateCourseDialog({ teachers }: { teachers: Teacher[] }) {
 
           <div className="space-y-2">
             <Label htmlFor="teacherId">Profesor asignado</Label>
-            <Select
-              value={selectedTeacher}
-              onValueChange={(v) => setValue('teacherId', v === UNASSIGNED ? null : v)}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger id="teacherId">
-                <SelectValue placeholder="Sin asignar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
-                {teachers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.full_name?.trim() || t.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {teachers.length === 0 ? (
+            {canAssignTeacher ? (
+              <>
+                <Select
+                  value={selectedTeacher}
+                  onValueChange={(v) => setValue('teacherId', v === UNASSIGNED ? null : v)}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="teacherId">
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
+                    {teachers.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.full_name?.trim() || t.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {teachers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No hay profesores registrados todavía. Puedes crearlo sin asignar y enlazarlo
+                    después.
+                  </p>
+                ) : null}
+              </>
+            ) : (
               <p className="text-xs text-muted-foreground">
-                No hay profesores registrados todavía. Puedes crearlo sin asignar y enlazarlo
-                después.
+                Serás el profesor asignado a este curso.
               </p>
-            ) : null}
+            )}
           </div>
 
           <DialogFooter className="gap-2">

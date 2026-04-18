@@ -29,6 +29,12 @@ interface Teacher {
   email: string;
 }
 
-export function CreateCourseDialogLazy({ teachers }: { teachers: Teacher[] }) {
-  return <LazyDialog teachers={teachers} />;
+export function CreateCourseDialogLazy({
+  teachers,
+  canAssignTeacher = true,
+}: {
+  teachers: Teacher[];
+  canAssignTeacher?: boolean;
+}) {
+  return <LazyDialog teachers={teachers} canAssignTeacher={canAssignTeacher} />;
 }

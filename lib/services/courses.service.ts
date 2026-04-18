@@ -37,16 +37,24 @@ export async function listCourses(ctx: AuthenticatedContext) {
 }
 
 export async function createCourse(ctx: AuthenticatedContext, input: CreateCourseInput) {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin') {
-    throw new ApiError('FORBIDDEN', 'Only admins can create courses');
+  // RBAC — staff only. RLS in the DB is the authoritative gate:
+  //   courses_insert_staff allows admin/super_admin on any course of the tenant,
+  //   and teacher only when they create the course for themselves.
+  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'teacher') {
+    throw new ApiError('FORBIDDEN', 'Only staff can create courses');
   }
   const supabase = createClient();
 
-  if (input.teacherId) {
+  // For teachers the server forces teacher_id = self. Any value they send is
+  // ignored (defence-in-depth: RLS would reject it anyway, but we fail fast).
+  const teacherId =
+    ctx.role === 'teacher' ? ctx.userId : (input.teacherId ?? null);
+
+  if (teacherId && ctx.role !== 'teacher') {
     const { data: teacher } = await supabase
       .from('profiles')
       .select('id, role')
-      .eq('id', input.teacherId)
+      .eq('id', teacherId)
       .single();
     if (!teacher || teacher.role !== 'teacher') {
       throw new ApiError('VALIDATION_ERROR', 'Assigned user is not a teacher in this institution');
@@ -59,7 +67,7 @@ export async function createCourse(ctx: AuthenticatedContext, input: CreateCours
       institution_id: ctx.institutionId, // trusted: from JWT
       name: input.name,
       description: input.description ?? null,
-      teacher_id: input.teacherId ?? null,
+      teacher_id: teacherId,
       created_by: ctx.userId,
     })
     .select('*')

@@ -46,14 +46,22 @@ export default async function CoursesPage() {
     }
   }
 
-  const canCreate = ctx.role === 'admin' || ctx.role === 'super_admin';
+  const canCreate =
+    ctx.role === 'admin' || ctx.role === 'super_admin' || ctx.role === 'teacher';
 
   return (
     <>
       <PageHeader
         title="Cursos"
         description="Todos los cursos de tu institución a los que tienes acceso."
-        actions={canCreate ? <CreateCourseDialogLazy teachers={teachers} /> : null}
+        actions={
+          canCreate ? (
+            <CreateCourseDialogLazy
+              teachers={teachers}
+              canAssignTeacher={ctx.role === 'admin' || ctx.role === 'super_admin'}
+            />
+          ) : null
+        }
       />
 
       {courses.length === 0 ? (

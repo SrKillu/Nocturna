@@ -694,3 +694,51 @@ metadata_tests:
             `courses_insert_admin` parece no estar activa. Requiere investigación adicional
             (probablemente re-aplicar `0005_rls_policies.sql` o verificar que el DROP POLICY IF
             EXISTS + CREATE POLICY del consolidated.sql sí se haya ejecutado para INSERT).
+
+
+  - task: "Fase A · Extensión CSRF allowlist para cluster hostname + teachers crean cursos"
+    implemented: true
+    working: "NA"
+    file: "lib/security/csrf.ts, lib/services/courses.service.ts, app/(dashboard)/courses/page.tsx, components/courses/create-course-dialog.tsx, components/courses/create-course-dialog-lazy.tsx, supabase/migrations/0011_courses_insert_staff.sql, scripts/smoke-post-course.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Fase A completada en código. Usuario debe aplicar el SQL de migración para desbloquear RLS.
+
+          1) CSRF — extensión crítica del allowlist:
+             Log real del usuario reveló que Emergent preview sirve en DOS dominios simultáneos:
+               * Browser → Host: nocturna-academic.cluster-8.preview.emergentcf.cloud
+               * Ingress → x-forwarded-host: nocturna-academic.preview.emergentagent.com
+             El fix del turno previo solo cubría 'missing' (Origin ausente). Este turno añade:
+               * trustedHosts() ahora incluye Host + X-Forwarded-Host + nextUrl.host + NEXT_PUBLIC_BASE_URL.
+             Smoke comprueba Origin=cluster con x-forwarded-host=cluster → pasa CSRF (antes: 403).
+
+          2) RLS courses — nueva familia de policies staff:
+             * supabase/migrations/0011_courses_insert_staff.sql:
+                 - DROP courses_insert_admin / courses_update_admin / etc.
+                 - CREATE courses_insert_staff · admin siempre · teacher solo sus propios cursos
+                 - CREATE courses_update_staff · admin cualquiera · teacher sólo los asignados a él
+                 - CREATE courses_delete_admin · sólo admin/super_admin
+                 - NOTIFY pgrst + SELECT diagnóstico de pg_policy al final.
+             * lib/services/courses.service.ts · createCourse ahora permite teacher; fuerza teacher_id=self
+               para teachers (defence-in-depth, RLS también lo rechazaría).
+             * UI — canCreate incluye teacher; CreateCourseDialog acepta canAssignTeacher prop
+               (teachers no ven selector de profesor, se auto-asignan).
+
+          3) Verificación smoke (scripts/smoke-post-course.ts, 6 escenarios):
+             A · admin · origin=localhost                     → CSRF ✅ · luego RLS (esperado hasta SQL)
+             B · admin · origin=public                        → CSRF ✅ · luego RLS
+             C · admin · sin origin (iframe sandbox)          → CSRF ✅ · luego RLS
+             E · admin · origin=cluster + x-forwarded-host    → CSRF ✅ · luego RLS ← CASO REAL USER
+             F · admin · origin=evil.example (ataque real)    → CSRF rechaza 403 ✅
+             G · teacher · origin=public                      → CSRF ✅ · luego RLS
+
+          Typecheck ✅ · tests 44/44 ✅ · lint limpio.
+
+          PENDIENTE POR PARTE DEL USUARIO:
+            * Ejecutar supabase/migrations/0011_courses_insert_staff.sql en su SQL Editor.
+            * Tras eso, los 6 escenarios legítimos deben devolver 201 (curso creado).
