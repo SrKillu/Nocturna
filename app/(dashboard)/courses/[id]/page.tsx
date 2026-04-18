@@ -19,6 +19,8 @@ import { EnrollStudentPanel } from '@/components/courses/enroll-student-panel';
 import { CourseStream } from '@/components/courses/course-stream';
 import { CoursePeople } from '@/components/courses/course-people';
 import { CourseTasksTab } from '@/components/courses/course-tasks-tab';
+import { CourseMaterialsTab } from '@/components/courses/course-materials-tab';
+import { CourseGradesTab } from '@/components/courses/course-grades-tab';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,6 +133,8 @@ export default async function CourseDetailPage({
         <TabsList className="w-full justify-start gap-1 bg-card">
           <TabsTrigger value="stream">Novedades</TabsTrigger>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
+          <TabsTrigger value="materials">Materiales</TabsTrigger>
+          <TabsTrigger value="grades">Notas</TabsTrigger>
           <TabsTrigger value="people">Personas</TabsTrigger>
         </TabsList>
 
@@ -154,6 +158,30 @@ export default async function CourseDetailPage({
             enrolled={people
               .filter((p) => p.role === 'student')
               .map((p) => ({ id: p.id, email: p.email, full_name: p.full_name }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="materials" className="space-y-4">
+          <CourseMaterialsTab
+            courseId={detail.id}
+            canManage={
+              ctx.role === 'admin' ||
+              ctx.role === 'super_admin' ||
+              (ctx.role === 'teacher' && detail.teacher_id === ctx.userId)
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="grades" className="space-y-4">
+          <CourseGradesTab
+            courseId={detail.id}
+            canManage={
+              ctx.role === 'admin' ||
+              ctx.role === 'super_admin' ||
+              (ctx.role === 'teacher' && detail.teacher_id === ctx.userId)
+            }
+            isStudent={ctx.role === 'student'}
+            ownUserId={ctx.userId}
           />
         </TabsContent>
       </Tabs>
