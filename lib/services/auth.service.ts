@@ -12,9 +12,11 @@ export interface BootstrapResult {
 /**
  * Bootstraps a new institution + admin user atomically.
  * Runs with the service-role client (bypasses RLS) because:
- *   - The institution does not yet exist
- *   - There is no authenticated caller yet
- * Validation has already been done with Zod at the route layer.
+ *   - The institution does not yet exist.
+ *   - There is no authenticated caller yet.
+ *
+ * IMPORTANT: role + institution_id are written ONLY to `app_metadata`
+ * (server-controlled). `user_metadata` is NEVER used for auth-critical values.
  */
 export async function bootstrapInstitutionAndAdmin(
   input: InstitutionSignupInput
@@ -43,59 +45,70 @@ export async function bootstrapInstitutionAndAdmin(
     throw new ApiError('INTERNAL_ERROR', `Could not create institution: ${instErr?.message ?? ''}`);
   }
 
-  // 2. Create auth user (confirmed). This also fires the handle_new_auth_user trigger,
-  //    so the profile row exists right away with default role=student.
+  const institutionId = (institution as { id: string }).id;
+
+  // 2. Create auth user (email-confirmed). `app_metadata` carries the role and tenant.
+  //    handle_new_user() will read raw_app_meta_data and insert the profile row.
   const { data: created, error: userErr } = await admin.auth.admin.createUser({
     email: input.adminEmail,
     password: input.adminPassword,
     email_confirm: true,
-    user_metadata: {
+    app_metadata: {
+      user_role: 'admin',
+      institution_id: institutionId,
       full_name: input.adminFullName,
-      institution_id: institution.id,
-      role: 'admin',
     },
   });
 
-  if (userErr || !created.user) {
+  if (userErr || !created?.user) {
     // Rollback institution to avoid orphans.
-    await admin.from('institutions').delete().eq('id', institution.id);
+    await admin.from('institutions').delete().eq('id', institutionId);
     if (userErr?.message?.toLowerCase().includes('registered')) {
       throw new ApiError('CONFLICT', 'Email already registered');
     }
-    throw new ApiError('INTERNAL_ERROR', `Could not create admin user: ${userErr?.message ?? ''}`);
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      `Could not create admin user: ${userErr?.message ?? ''}`
+    );
   }
 
   const userId = created.user.id;
 
-  // 3. Upsert profile with admin role + institution binding (trigger may have run first).
-  const { error: profileErr } = await admin.from('profiles').upsert(
-    {
-      id: userId,
-      institution_id: institution.id,
-      role: 'admin',
-      email: input.adminEmail,
-      full_name: input.adminFullName,
-    },
-    { onConflict: 'id' }
-  );
+  // 3. Safety net: ensure the profile row reflects the correct values, in case
+  //    the handle_new_user trigger ran before the institution_id arrived or under
+  //    slightly different conditions. Service role bypasses RLS.
+  const { error: profileErr } = await admin
+    .from('profiles')
+    .upsert(
+      {
+        id: userId,
+        institution_id: institutionId,
+        role: 'admin',
+        email: input.adminEmail,
+        full_name: input.adminFullName,
+      },
+      { onConflict: 'id' }
+    );
 
   if (profileErr) {
-    // Best-effort cleanup.
     await admin.auth.admin.deleteUser(userId);
-    await admin.from('institutions').delete().eq('id', institution.id);
-    throw new ApiError('INTERNAL_ERROR', `Could not create admin profile: ${profileErr.message}`);
+    await admin.from('institutions').delete().eq('id', institutionId);
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      `Could not create admin profile: ${profileErr.message}`
+    );
   }
 
   return {
-    institutionId: institution.id,
+    institutionId,
     userId,
     email: input.adminEmail,
   };
 }
 
 /**
- * Admin-only: invite a user inside the current institution.
- * Creates the auth user with a temporary password + profile row.
+ * Admin-only: invite a user into the caller's institution.
+ * All auth-critical fields (role, institution_id) go through `app_metadata`.
  */
 export async function inviteUserToInstitution(params: {
   institutionId: string;
@@ -111,30 +124,32 @@ export async function inviteUserToInstitution(params: {
     email: params.email,
     password: temporaryPassword,
     email_confirm: true,
-    user_metadata: {
-      full_name: params.fullName,
+    app_metadata: {
+      user_role: params.role,
       institution_id: params.institutionId,
-      role: params.role,
+      full_name: params.fullName,
     },
   });
 
-  if (userErr || !created.user) {
+  if (userErr || !created?.user) {
     if (userErr?.message?.toLowerCase().includes('registered')) {
       throw new ApiError('CONFLICT', 'Email already registered');
     }
     throw new ApiError('INTERNAL_ERROR', `Could not create user: ${userErr?.message ?? ''}`);
   }
 
-  const { error: profileErr } = await admin.from('profiles').upsert(
-    {
-      id: created.user.id,
-      institution_id: params.institutionId,
-      role: params.role,
-      email: params.email,
-      full_name: params.fullName,
-    },
-    { onConflict: 'id' }
-  );
+  const { error: profileErr } = await admin
+    .from('profiles')
+    .upsert(
+      {
+        id: created.user.id,
+        institution_id: params.institutionId,
+        role: params.role,
+        email: params.email,
+        full_name: params.fullName,
+      },
+      { onConflict: 'id' }
+    );
 
   if (profileErr) {
     await admin.auth.admin.deleteUser(created.user.id);
