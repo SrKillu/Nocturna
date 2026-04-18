@@ -22,7 +22,18 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
   if (mutating) {
     const token = readCookie(CSRF_COOKIE);
     if (token) headers.set(CSRF_HEADER, token);
-    if (!headers.has('content-type') && init.body) {
+    // Only set JSON Content-Type for plain JSON bodies. FormData/Blob/URLSearchParams
+    // bodies must let the browser choose the correct Content-Type (and boundary).
+    const body = init.body;
+    const isJsonBody =
+      typeof body === 'string' ||
+      (body != null &&
+        typeof body === 'object' &&
+        !(body instanceof FormData) &&
+        !(body instanceof Blob) &&
+        !(body instanceof URLSearchParams) &&
+        !(typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer));
+    if (!headers.has('content-type') && body && isJsonBody) {
       headers.set('content-type', 'application/json');
     }
   }

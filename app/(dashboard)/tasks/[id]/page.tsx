@@ -7,7 +7,9 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardList,
+  Download,
   FileText,
+  Paperclip,
   Target,
 } from 'lucide-react';
 import { SubmissionUploader } from '@/components/submissions/submission-uploader';
@@ -95,6 +97,43 @@ export default async function TaskDetailPage({
         />
       </section>
 
+      {detail.has_file ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Material adjunto</CardTitle>
+            <CardDescription>
+              Archivo publicado por el profesor. Puedes descargarlo desde aquí.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-4 py-3">
+              <span className="flex min-w-0 items-center gap-2">
+                <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="truncate text-sm font-medium">
+                  {detail.file_name ?? 'archivo'}
+                </span>
+                {detail.file_size ? (
+                  <span className="text-xs text-muted-foreground">
+                    ({formatBytes(detail.file_size)})
+                  </span>
+                ) : null}
+              </span>
+              <Button asChild size="sm" variant="outline">
+                <a
+                  href={`/api/tasks/${detail.id}/file`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                >
+                  <Download className="mr-1.5 h-4 w-4" />
+                  Descargar
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {ctx.role === 'student' ? (
         <SubmissionUploader
           taskId={detail.id}
@@ -178,6 +217,12 @@ function labelFor(status: string): string {
     default:
       return status;
   }
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function MetaCard({

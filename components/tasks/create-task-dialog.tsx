@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Paperclip, Plus, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,14 @@ import {
 } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api/client';
 
+const MAX_BYTES = 25 * 1024 * 1024;
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
 /**
  * Client-side form schema — intentionally narrower than the API schema so we
  * can accept `<input type="datetime-local">` values and optional blank fields
@@ -50,6 +58,7 @@ interface CreateTaskDialogProps {
 export function CreateTaskDialog({ courses }: CreateTaskDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -71,28 +80,43 @@ export function CreateTaskDialog({ courses }: CreateTaskDialogProps) {
   } = form;
 
   async function onSubmit(values: FormValues): Promise<void> {
-    const payload = {
-      courseId: values.courseId,
-      title: values.title,
-      description: values.description?.trim() ? values.description : null,
-      dueDate: values.dueDate ? new Date(values.dueDate).toISOString() : null,
-      maxScore: values.maxScore,
-    };
-    const res = await apiFetch('/api/tasks', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    const body = (await res.json().catch(() => ({}))) as {
+    // If there's a file, send multipart/form-data. Otherwise keep JSON for
+    // backward-compatible request shape.
+    const hasFile = file != null;
+    let body: BodyInit;
+
+    if (hasFile) {
+      const fd = new FormData();
+      fd.set('courseId', values.courseId);
+      fd.set('title', values.title);
+      if (values.description?.trim()) fd.set('description', values.description);
+      if (values.dueDate) fd.set('dueDate', new Date(values.dueDate).toISOString());
+      fd.set('maxScore', String(values.maxScore));
+      fd.set('file', file!);
+      body = fd;
+    } else {
+      body = JSON.stringify({
+        courseId: values.courseId,
+        title: values.title,
+        description: values.description?.trim() ? values.description : null,
+        dueDate: values.dueDate ? new Date(values.dueDate).toISOString() : null,
+        maxScore: values.maxScore,
+      });
+    }
+
+    const res = await apiFetch('/api/tasks', { method: 'POST', body });
+    const payload = (await res.json().catch(() => ({}))) as {
       error?: { message?: string };
     };
     if (!res.ok) {
       toast.error('No se pudo crear la tarea', {
-        description: body?.error?.message ?? `HTTP ${res.status}`,
+        description: payload?.error?.message ?? `HTTP ${res.status}`,
       });
       return;
     }
     toast.success('Tarea creada');
     reset();
+    setFile(null);
     setOpen(false);
     router.refresh();
   }
@@ -103,7 +127,10 @@ export function CreateTaskDialog({ courses }: CreateTaskDialogProps) {
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) reset();
+        if (!next) {
+          reset();
+          setFile(null);
+        }
         setOpen(next);
       }}
     >
@@ -197,12 +224,56 @@ export function CreateTaskDialog({ courses }: CreateTaskDialogProps) {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="file">Archivo adjunto (opcional)</Label>
+            {file ? (
+              <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <span className="flex items-center gap-2 truncate">
+                  <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">({formatBytes(file.size)})</span>
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFile(null)}
+                  disabled={isSubmitting}
+                  aria-label="Quitar archivo"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Input
+                  id="file"
+                  type="file"
+                  disabled={isSubmitting}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && f.size > MAX_BYTES) {
+                      toast.error('Archivo demasiado grande', {
+                        description: `Máximo 25 MB. Este pesa ${formatBytes(f.size)}.`,
+                      });
+                      e.target.value = '';
+                      return;
+                    }
+                    setFile(f);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Máximo 25 MB. Cualquier formato.</p>
+              </>
+            )}
+          </div>
+
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => {
                 reset();
+                setFile(null);
                 setOpen(false);
               }}
               disabled={isSubmitting}

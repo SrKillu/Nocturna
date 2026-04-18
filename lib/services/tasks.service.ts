@@ -4,7 +4,21 @@ import { ApiError } from '@/lib/errors';
 import type { AuthenticatedContext } from '@/lib/types/auth';
 import type { CreateTaskInput } from '@/lib/validations/tasks';
 
-export async function createTask(ctx: AuthenticatedContext, input: CreateTaskInput) {
+const TASK_FILES_BUCKET = 'task_files';
+const TASK_FILE_MAX_BYTES = 25 * 1024 * 1024; // 25MB
+
+export interface CreateTaskFile {
+  name: string;
+  mime: string;
+  bytes: Uint8Array | ArrayBuffer;
+  size: number;
+}
+
+export async function createTask(
+  ctx: AuthenticatedContext,
+  input: CreateTaskInput,
+  file?: CreateTaskFile
+) {
   if (ctx.role !== 'teacher' && ctx.role !== 'admin' && ctx.role !== 'super_admin') {
     throw new ApiError('FORBIDDEN', 'Only teachers or admins can create tasks');
   }
@@ -27,7 +41,12 @@ export async function createTask(ctx: AuthenticatedContext, input: CreateTaskInp
     throw new ApiError('FORBIDDEN', 'Teacher not assigned to this course');
   }
 
-  const { data, error } = await supabase
+  if (file && file.size > TASK_FILE_MAX_BYTES) {
+    throw new ApiError('VALIDATION_ERROR', 'Archivo demasiado grande (máx 25 MB)');
+  }
+
+  // 1) Insert task row first — we need its id for the storage path.
+  const { data: inserted, error } = await supabase
     .from('tasks')
     .insert({
       institution_id: ctx.institutionId,
@@ -42,7 +61,119 @@ export async function createTask(ctx: AuthenticatedContext, input: CreateTaskInp
     .single();
 
   if (error) throw new ApiError('INTERNAL_ERROR', error.message);
-  return data;
+
+  // 2) If there's a file, upload it and update the task with its metadata.
+  //    On upload failure we compensate by deleting the task to avoid orphans.
+  if (file) {
+    const safeName = sanitizeFilename(file.name);
+    const path = `${ctx.institutionId}/${input.courseId}/${inserted.id}/${safeName}`;
+    const bytes = file.bytes instanceof Uint8Array ? file.bytes : new Uint8Array(file.bytes);
+
+    const up = await supabase.storage
+      .from(TASK_FILES_BUCKET)
+      .upload(path, bytes, {
+        contentType: file.mime || 'application/octet-stream',
+        upsert: true,
+      });
+
+    if (up.error) {
+      await supabase.from('tasks').delete().eq('id', inserted.id);
+      throw new ApiError(
+        'INTERNAL_ERROR',
+        `No se pudo subir el archivo: ${up.error.message}`
+      );
+    }
+
+    const { data: updated, error: upErr } = await supabase
+      .from('tasks')
+      .update({
+        file_url: path,
+        file_name: safeName,
+        file_size: file.size,
+      })
+      .eq('id', inserted.id)
+      .select('*')
+      .single();
+
+    if (upErr) {
+      // Best-effort compensation.
+      await supabase.storage.from(TASK_FILES_BUCKET).remove([path]).catch(() => undefined);
+      await supabase.from('tasks').delete().eq('id', inserted.id);
+      throw new ApiError('INTERNAL_ERROR', upErr.message);
+    }
+    return updated;
+  }
+
+  return inserted;
+}
+
+function sanitizeFilename(raw: string): string {
+  // Strip directory components and keep only a conservative subset to avoid
+  // Supabase storage path surprises. Defaults to "archivo" if empty.
+  const base = raw.split(/[\\/]/).pop() ?? '';
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120);
+  return cleaned || 'archivo';
+}
+
+/**
+ * Mints a short-lived signed URL for a task's attachment, after checking that
+ * the caller is allowed to see it. Storage RLS enforces the same rules from
+ * the DB side — this is defence-in-depth + a friendly 403/404.
+ */
+export async function getTaskFileSignedUrl(
+  ctx: AuthenticatedContext,
+  taskId: string,
+  expiresInSec = 60
+): Promise<{ url: string; fileName: string; size: number | null }> {
+  const supabase = createClient();
+  const { data: task, error } = await supabase
+    .from('tasks')
+    .select('id, course_id, file_url, file_name, file_size, institution_id')
+    .eq('id', taskId)
+    .maybeSingle();
+  if (error) throw new ApiError('INTERNAL_ERROR', error.message);
+  if (!task) throw new ApiError('NOT_FOUND', 'Tarea no encontrada');
+  if (!task.file_url) throw new ApiError('NOT_FOUND', 'La tarea no tiene archivo adjunto');
+
+  // Authorization (app-level): admin/super_admin OR teacher of the course OR enrolled student.
+  if (ctx.role !== 'admin' && ctx.role !== 'super_admin') {
+    if (ctx.role === 'teacher') {
+      const { data: c } = await supabase
+        .from('courses')
+        .select('teacher_id')
+        .eq('id', task.course_id)
+        .maybeSingle();
+      if (!c || c.teacher_id !== ctx.userId) {
+        throw new ApiError('FORBIDDEN', 'Sin acceso al archivo');
+      }
+    } else {
+      const { count } = await supabase
+        .from('enrollments')
+        .select('id', { count: 'exact', head: true })
+        .eq('course_id', task.course_id)
+        .eq('student_id', ctx.userId);
+      if (!count || count < 1) {
+        throw new ApiError('FORBIDDEN', 'Sin acceso al archivo');
+      }
+    }
+  }
+
+  const signed = await supabase.storage
+    .from(TASK_FILES_BUCKET)
+    .createSignedUrl(task.file_url, expiresInSec, {
+      download: task.file_name ?? undefined,
+    });
+  if (signed.error || !signed.data?.signedUrl) {
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      signed.error?.message ?? 'No se pudo generar URL firmada'
+    );
+  }
+  return {
+    url: signed.data.signedUrl,
+    fileName: task.file_name ?? 'archivo',
+    size: task.file_size,
+  };
 }
 
 export async function listTasksForCourse(ctx: AuthenticatedContext, courseId: string) {
@@ -198,6 +329,10 @@ export interface TaskDetail {
     submitted_at: string;
   } | null;
   can_edit: boolean;
+  /** Attachment metadata. Null when the task has no file. */
+  file_name: string | null;
+  file_size: number | null;
+  has_file: boolean;
 }
 
 export async function getTaskDetail(
@@ -209,7 +344,7 @@ export async function getTaskDetail(
   const { data: task } = await supabase
     .from('tasks')
     .select(
-      'id, title, description, due_date, max_score, created_at, course:courses!inner(id, name, teacher_id)'
+      'id, title, description, due_date, max_score, created_at, file_url, file_name, file_size, course:courses!inner(id, name, teacher_id)'
     )
     .eq('id', taskId)
     .maybeSingle();
@@ -222,6 +357,9 @@ export async function getTaskDetail(
     due_date: string | null;
     max_score: number;
     created_at: string;
+    file_url: string | null;
+    file_name: string | null;
+    file_size: number | null;
     course: { id: string; name: string; teacher_id: string | null };
   };
 
@@ -260,6 +398,9 @@ export async function getTaskDetail(
     graded_count: subs.filter((s) => s.status === 'graded').length,
     own_submission: (own.data ?? null) as TaskDetail['own_submission'],
     can_edit: canEdit,
+    file_name: typed.file_name,
+    file_size: typed.file_size,
+    has_file: Boolean(typed.file_url),
   };
 }
 
