@@ -38,3 +38,120 @@ export async function gradeSubmission(
 
   return data;
 }
+
+export interface GradeListItem {
+  submission_id: string;
+  task_id: string;
+  task_title: string;
+  course_id: string;
+  course_name: string;
+  student_id: string;
+  student_name: string | null;
+  student_email: string | null;
+  status: import('@/lib/types/database').SubmissionStatus;
+  submitted_at: string;
+  max_score: number;
+  score: number | null;
+  feedback: string | null;
+  graded_at: string | null;
+}
+
+/**
+ * Student-facing: every submission of the current user together with its
+ * grade (if any). Ordered newest first.
+ */
+export async function listGradesForStudent(
+  ctx: AuthenticatedContext
+): Promise<GradeListItem[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('submissions')
+    .select(
+      'id, task_id, status, submitted_at, student_id, task:tasks!inner(title, course_id, max_score, course:courses!inner(id, name)), grade:grades(score, feedback, graded_at)'
+    )
+    .eq('student_id', ctx.userId)
+    .order('submitted_at', { ascending: false });
+
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    task_id: string;
+    status: import('@/lib/types/database').SubmissionStatus;
+    submitted_at: string;
+    student_id: string;
+    task: { title: string; course_id: string; max_score: number; course: { id: string; name: string } } | null;
+    grade: Array<{ score: number; feedback: string | null; graded_at: string }> | null;
+  }>).map((r) => {
+    const g = r.grade?.[0] ?? null;
+    return {
+      submission_id: r.id,
+      task_id: r.task_id,
+      task_title: r.task?.title ?? '',
+      course_id: r.task?.course?.id ?? '',
+      course_name: r.task?.course?.name ?? '',
+      student_id: r.student_id,
+      student_name: null,
+      student_email: null,
+      status: r.status,
+      submitted_at: r.submitted_at,
+      max_score: r.task?.max_score ?? 0,
+      score: g?.score ?? null,
+      feedback: g?.feedback ?? null,
+      graded_at: g?.graded_at ?? null,
+    };
+  });
+}
+
+/**
+ * Staff-facing: submissions the caller can grade.
+ *   teacher → submissions of tasks in their courses
+ *   admin   → every submission in the tenant
+ */
+export async function listGradesForReview(
+  ctx: AuthenticatedContext,
+  opts: { onlyPending?: boolean } = {}
+): Promise<GradeListItem[]> {
+  if (ctx.role === 'student') {
+    throw new ApiError('FORBIDDEN', 'Students cannot review grades');
+  }
+  const supabase = createClient();
+  let query = supabase
+    .from('submissions')
+    .select(
+      'id, task_id, status, submitted_at, student_id, task:tasks!inner(title, course_id, max_score, course:courses!inner(id, name, teacher_id)), student:profiles!submissions_student_id_fkey(full_name, email), grade:grades(score, feedback, graded_at)'
+    )
+    .order('submitted_at', { ascending: false });
+
+  if (ctx.role === 'teacher') query = query.eq('task.course.teacher_id', ctx.userId);
+  if (opts.onlyPending) query = query.eq('status', 'submitted');
+
+  const { data } = await query;
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    task_id: string;
+    status: import('@/lib/types/database').SubmissionStatus;
+    submitted_at: string;
+    student_id: string;
+    task: { title: string; course_id: string; max_score: number; course: { id: string; name: string } } | null;
+    student: { full_name: string | null; email: string } | null;
+    grade: Array<{ score: number; feedback: string | null; graded_at: string }> | null;
+  }>).map((r) => {
+    const g = r.grade?.[0] ?? null;
+    return {
+      submission_id: r.id,
+      task_id: r.task_id,
+      task_title: r.task?.title ?? '',
+      course_id: r.task?.course?.id ?? '',
+      course_name: r.task?.course?.name ?? '',
+      student_id: r.student_id,
+      student_name: r.student?.full_name ?? null,
+      student_email: r.student?.email ?? null,
+      status: r.status,
+      submitted_at: r.submitted_at,
+      max_score: r.task?.max_score ?? 0,
+      score: g?.score ?? null,
+      feedback: g?.feedback ?? null,
+      graded_at: g?.graded_at ?? null,
+    };
+  });
+}
+

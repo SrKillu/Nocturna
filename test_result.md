@@ -474,3 +474,23 @@ metadata_tests:
             * components/submissions/submission-status-filter.tsx (client): Select que hace router.push a ?status=.
             * app/(dashboard)/tasks/[id]/page.tsx: inyectado SubmissionUploader para students (server→client boundary correcta); existingStatus='graded' deshabilita el formulario.
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /submissions → 307 a login en modo placeholder.
+
+  - task: "PROMPT FRONTEND 7 — Calificaciones (tabla role-aware + inline grading)"
+    implemented: true
+    working: true
+    file: "app/(dashboard)/grades/page.tsx, lib/services/grades.service.ts, components/grades/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Módulo de Calificaciones completo:
+            * lib/services/grades.service.ts: añadidos listGradesForStudent(ctx) (submissions propias + grade embebida) y listGradesForReview(ctx, {onlyPending?}) (teacher→own courses, admin→tenant; filtro por status='submitted' si onlyPending).
+            * app/(dashboard)/grades/page.tsx (Server Component): split por rol. Student → StudentGradesTable read-only. Staff → ReviewGradesTable con edición inline + GradeFilter (Todas/Pendientes) vía ?pending=1.
+            * components/grades/student-grades-table.tsx: shadcn Table con columnas Tarea (link a /tasks/:id) · Curso · Entregada (fecha relativa) · Nota (score/max) · Feedback (line-clamp-2) · Estado (badge). Columnas hidden md/lg para responsive.
+            * components/grades/review-grades-table.tsx: columnas Tarea · Curso · Estudiante · Enviada · Estado · Nota/Feedback (GradeCell). Misma estrategia responsive.
+            * components/grades/grade-cell.tsx (client): inline Input numérico (0..max_score) + Textarea feedback + botón Guardar. POST a /api/submissions/:id/grade → RPC grade_submission (upsert + status flip + audit). Validación cliente antes de enviar. toast + router.refresh() tras éxito. Cada celda mantiene su propio loading (rows independientes).
+            * components/grades/grade-filter.tsx (client): pair de botones estilo segmented control, URL-first ?pending=1.
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /grades → 307 a login en modo placeholder.
