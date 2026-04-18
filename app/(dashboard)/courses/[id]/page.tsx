@@ -21,6 +21,7 @@ import { CoursePeople } from '@/components/courses/course-people';
 import { CourseTasksTab } from '@/components/courses/course-tasks-tab';
 import { CourseMaterialsTab } from '@/components/courses/course-materials-tab';
 import { CourseGradesTab } from '@/components/courses/course-grades-tab';
+import { CourseChatTab } from '@/components/courses/course-chat-tab';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +135,7 @@ export default async function CourseDetailPage({
           <TabsTrigger value="stream">Novedades</TabsTrigger>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
           <TabsTrigger value="materials">Materiales</TabsTrigger>
+          <TabsTrigger value="chat">Chat</TabsTrigger>
           <TabsTrigger value="grades">Notas</TabsTrigger>
           <TabsTrigger value="people">Personas</TabsTrigger>
         </TabsList>
