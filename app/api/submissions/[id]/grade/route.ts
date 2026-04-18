@@ -14,6 +14,7 @@ export async function POST(
     const ctx = await requireAuth();
     const body = await request.json();
     const input = gradeSubmissionSchema.parse(body);
+    // gradeSubmission delegates to the transactional RPC grade_submission.
     const grade = await gradeSubmission(ctx, params.id, input);
     return NextResponse.json({ data: grade }, { status: 201 });
   } catch (err) {

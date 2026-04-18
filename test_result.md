@@ -255,3 +255,51 @@ agent_communication:
       el hook `public.custom_access_token_hook` en Dashboard → Authentication → Hooks, (5) crear bucket
       privado `submissions`. Después de eso se puede testear signup → login → crear curso → matricular
       → crear tarea → entregar → calificar.
+
+  - task: "RPC transaccional grade_submission"
+    implemented: true
+    working: "NA"
+    file: "supabase/migrations/0009_business_rpcs.sql, lib/services/grades.service.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Una sola llamada RPC upsert grade + flip status + audit_log. SECURITY INVOKER. Valida ownership del teacher y score<=max_score. Errores Postgres mapeados a ApiError sin leak."
+
+  - task: "Rate limiting (auth/signup, admin/users, files)"
+    implemented: true
+    working: "NA"
+    file: "lib/rate-limit.ts, app/api/auth/signup/route.ts, app/api/institution/users/route.ts, app/api/files/*"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed-window in-memory. signup 3/60s por IP, admin create 10/60s user+IP, upload 30/60s, download 60/60s. Header Retry-After en 429."
+
+  - task: "Files service (signed upload + signed download)"
+    implemented: true
+    working: "NA"
+    file: "lib/services/files.service.ts, app/api/files/upload/route.ts, app/api/files/signed-url/route.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Path convention {institution}/{student}/{task}/{uuid-filename}. MIME whitelist + size 20MB. createSignedUploadUrl para subir directo a Storage. createSignedUrl 60s con existencia verificada via storage.list(). 404 si cross-tenant para no filtrar existencia."
+
+  - task: "Audit log service"
+    implemented: true
+    working: "NA"
+    file: "lib/services/audit.service.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Best-effort insert con institution_id desde DEFAULT auth.institution_id(). Usado en user.invite y file.upload_url.issued. grade.upsert ya lo hace desde el RPC."
