@@ -5,6 +5,14 @@ import { AppShell } from '@/components/layout/app-shell';
 import { AuthAuditLogger } from '@/components/auth/auth-audit-logger';
 import { SessionRecovery } from '@/components/auth/session-recovery';
 
+// The authenticated shell depends on auth cookies (per-request), so Next must
+// never try to cache the RSC payload. Without this flag, Next.js can serve the
+// pre-rendered HTML of a previous user to a different session → hydration
+// mismatches on user-specific fields (email, full name, institution).
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
+
 /**
  * Shell layout for every authenticated page.
  *

@@ -102,8 +102,10 @@ export function SidebarInner({ user, institutionName, onNavigate }: SidebarProps
       </nav>
 
       <div className="border-t px-5 py-4 text-xs text-muted-foreground">
-        <p className="truncate font-medium text-foreground">{user.fullName ?? user.email}</p>
-        <p className="truncate">{user.email}</p>
+        <p className="truncate font-medium text-foreground" suppressHydrationWarning>
+          {user.fullName ?? user.email}
+        </p>
+        <p className="truncate" suppressHydrationWarning>{user.email}</p>
       </div>
     </div>
   );

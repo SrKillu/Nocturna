@@ -107,8 +107,8 @@ export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
         ) : null}
         <ThemeToggle />
         <div className="hidden text-right md:block">
-          <p className="text-sm font-medium leading-none">{displayName}</p>
-          <p className="text-xs text-muted-foreground">{user.email}</p>
+          <p className="text-sm font-medium leading-none" suppressHydrationWarning>{displayName}</p>
+          <p className="text-xs text-muted-foreground" suppressHydrationWarning>{user.email}</p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -119,14 +119,16 @@ export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
               disabled={busy}
             >
               <Avatar className="h-10 w-10">
-                <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                <AvatarFallback suppressHydrationWarning>{getInitials(user)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
-              <p className="truncate text-sm font-medium">{displayName}</p>
-              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              <p className="truncate text-sm font-medium" suppressHydrationWarning>{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground" suppressHydrationWarning>
+                {user.email}
+              </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => logout('local')} disabled={busy}>
