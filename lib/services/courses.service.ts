@@ -147,3 +147,90 @@ export async function listInstitutionTeachers(ctx: AuthenticatedContext) {
   if (error) throw new ApiError('INTERNAL_ERROR', error.message);
   return data ?? [];
 }
+
+export interface CourseDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  teacher_id: string | null;
+  created_at: string;
+  teacher: { id: string; full_name: string | null; email: string } | null;
+  enrollment_count: number;
+  task_count: number;
+  tasks: Array<{
+    id: string;
+    title: string;
+    due_date: string | null;
+    max_score: number;
+  }>;
+  is_enrolled: boolean;
+}
+
+/**
+ * Aggregated view for /courses/[id]. Returns null when the course is not
+ * reachable (RLS filtered it out, wrong tenant, missing id).
+ */
+export async function getCourseDetail(
+  ctx: AuthenticatedContext,
+  courseId: string
+): Promise<CourseDetail | null> {
+  const supabase = createClient();
+
+  const { data: course, error } = await supabase
+    .from('courses')
+    .select(
+      'id, name, description, teacher_id, created_at, teacher:profiles!courses_teacher_id_fkey(id, full_name, email)'
+    )
+    .eq('id', courseId)
+    .maybeSingle();
+
+  if (error || !course) return null;
+
+  const [{ count: enrollmentCount }, { count: taskCount }, tasksRes, ownEnroll] =
+    await Promise.all([
+      supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', courseId),
+      supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', courseId),
+      supabase
+        .from('tasks')
+        .select('id, title, due_date, max_score')
+        .eq('course_id', courseId)
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(20),
+      ctx.role === 'student'
+        ? supabase
+            .from('enrollments')
+            .select('id', { count: 'exact', head: true })
+            .eq('course_id', courseId)
+            .eq('student_id', ctx.userId)
+        : Promise.resolve({ count: 0 }),
+    ]);
+
+  const typed = course as unknown as {
+    id: string;
+    name: string;
+    description: string | null;
+    teacher_id: string | null;
+    created_at: string;
+    teacher: { id: string; full_name: string | null; email: string } | null;
+  };
+
+  return {
+    id: typed.id,
+    name: typed.name,
+    description: typed.description,
+    teacher_id: typed.teacher_id,
+    created_at: typed.created_at,
+    teacher: typed.teacher,
+    enrollment_count: Number(enrollmentCount ?? 0),
+    task_count: Number(taskCount ?? 0),
+    tasks: (tasksRes.data ?? []) as CourseDetail['tasks'],
+    is_enrolled: Number((ownEnroll as { count?: number | null }).count ?? 0) > 0,
+  };
+}
+

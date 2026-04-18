@@ -407,3 +407,24 @@ metadata_tests:
             * app/(dashboard)/dashboard/page.tsx: dynamic='force-dynamic' (datos frescos), try/catch con fallback a empty para no derribar el shell si falla una subquery.
             * SIN fetch a /api/* desde Server Components (pattern correcto en Next.js 14: llamar servicios directamente).
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /dashboard → 307 a login en modo placeholder.
+
+  - task: "PROMPT FRONTEND 4 — Cursos (listado + detalle + crear)"
+    implemented: true
+    working: true
+    file: "app/(dashboard)/courses/page.tsx, app/(dashboard)/courses/[id]/page.tsx, app/api/courses/[id]/route.ts, lib/services/courses.service.ts, components/courses/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Módulo de Cursos completo:
+            * app/(dashboard)/courses/page.tsx (Server Component): llama listCourses() + listInstitutionTeachers() (si es admin), grid responsive 1/2/3 col, EmptyModule cuando no hay cursos, CTA "Crear curso" solo para admin/super_admin.
+            * app/(dashboard)/courses/[id]/page.tsx (Server Component): detalle con getCourseDetail(); generateMetadata dinámico; 3 MetaCards (Profesor, Estudiantes, Tareas); listado de tareas ordenado por due_date; botón "Matricularme" solo si es student no matriculado; notFound() si RLS filtra.
+            * app/api/courses/[id]/route.ts (nuevo): GET para uso cliente futuro; 404 si RLS filtra (no leak de existencia).
+            * lib/services/courses.service.ts: añadido getCourseDetail(ctx, id) → {course, teacher, enrollment_count, task_count, tasks(top-20), is_enrolled}. Promise.all de 4 queries.
+            * components/courses/course-card.tsx: card con icono, nombre, descripción (line-clamp-2 + min-height), fecha relativa de creación; hover translate-y + border highlight.
+            * components/courses/create-course-dialog.tsx (client): shadcn Dialog + react-hook-form + Zod (createCourseSchema); Select de profesor con fallback UNASSIGNED; apiFetch() con CSRF automático; toast + router.refresh() tras éxito; reset en cancel/close.
+            * components/courses/enroll-button.tsx (client): POST /api/courses/:id/enroll con loading + toast + refresh.
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /courses y /courses/[id] → 307 a login en modo placeholder (correcto).
