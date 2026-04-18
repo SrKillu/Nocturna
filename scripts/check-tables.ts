@@ -7,18 +7,30 @@ const admin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-const tables = [
-  'institutions', 'profiles', 'courses', 'enrollments',
-  'tasks', 'submissions', 'grades', 'audit_log', 'file_objects',
-];
-
 (async () => {
-  for (const t of tables) {
-    const r = await admin.from(t).select('*').limit(1);
-    if (r.error) {
-      console.log(`✗ ${t.padEnd(14)} · ${r.error.code} · ${r.error.message}`);
-    } else {
-      console.log(`✓ ${t.padEnd(14)} · rows retrieved=${r.data?.length ?? 0}`);
-    }
+  console.log('--- Probe: profiles columns actually present ---');
+  // Si is_active/session_version NO existen, este select debería fallar.
+  const r = await admin
+    .from('profiles')
+    .select('id, email, full_name, role, institution_id, is_active, session_version')
+    .limit(1);
+
+  if (r.error) {
+    console.log('✗ select WITH is_active+session_version FAILED:');
+    console.log('  code   :', r.error.code);
+    console.log('  hint   :', r.error.hint);
+    console.log('  message:', r.error.message);
+  } else {
+    console.log('✓ select WITH is_active+session_version OK · sample row:');
+    console.log(JSON.stringify(r.data?.[0], null, 2));
   }
+
+  // Backup: sin los campos nuevos
+  console.log('\n--- Probe: profiles without optional columns ---');
+  const r2 = await admin
+    .from('profiles')
+    .select('id, email, full_name, role, institution_id')
+    .limit(3);
+  if (r2.error) console.log('✗', r2.error.message);
+  else console.log('✓ rows:', r2.data);
 })();
