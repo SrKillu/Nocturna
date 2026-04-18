@@ -44,6 +44,25 @@ vi.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
     auth: {
       getUser: async () => ({ data: { user: authState.user }, error: null }),
+      // readCurrentJwtClaims() decodes the raw access_token. For tests we build
+      // a synthetic JWT whose payload mirrors app_metadata both at top-level
+      // and inside app_metadata — matching how the 0008 hook mints real tokens.
+      getSession: async () => {
+        if (!authState.user) return { data: { session: null }, error: null };
+        const meta = authState.user.app_metadata ?? {};
+        const payload = { ...meta, app_metadata: meta };
+        const b64 = (s: string) =>
+          Buffer.from(s, 'utf8')
+            .toString('base64')
+            .replace(/=+$/g, '')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+        const token = `${b64('{"alg":"none"}')}.${b64(JSON.stringify(payload))}.`;
+        return {
+          data: { session: { access_token: token } },
+          error: null,
+        };
+      },
     },
     from: () => ({
       select: () => ({

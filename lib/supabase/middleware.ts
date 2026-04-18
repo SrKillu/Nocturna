@@ -10,6 +10,7 @@ import {
   CsrfError,
 } from '@/lib/security/csrf';
 import { sanitizeNextParam } from '@/lib/security/next-param';
+import { readCurrentJwtClaims } from '@/lib/auth/jwt-claims';
 
 const PUBLIC_API_PREFIXES = ['/api/health', '/api/auth/signup', '/api/auth/logout'];
 const AUTH_PAGES = new Set(['/login', '/signup']);
@@ -202,13 +203,17 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
 
   // --- Authenticated -----------------------------------------------------
-  const authUser = user as { app_metadata?: Record<string, unknown> };
-  const claims = (authUser.app_metadata ?? {}) as {
+  // IMPORTANT: `user.app_metadata` reflects auth.users.raw_app_meta_data
+  // (stored in the DB), NOT the actual claims minted by the Custom Access
+  // Token Hook. Reading it directly misses hook-injected claims such as
+  // `session_version` and `is_active`. We therefore decode the real JWT.
+  const rawClaims = (await readCurrentJwtClaims(supabase)) ?? {};
+  const claims: {
     user_role?: UserRole;
     institution_id?: string;
     is_active?: boolean;
     session_version?: number;
-  };
+  } = rawClaims;
 
   // Already logged in but hitting auth pages -> send to dashboard.
   if (AUTH_PAGES.has(pathname)) {

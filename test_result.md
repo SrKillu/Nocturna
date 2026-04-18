@@ -600,3 +600,43 @@ metadata_tests:
             * Todo el resto del UI usa tokens semánticos (bg-background, bg-card, text-foreground, border-border, bg-muted, text-muted-foreground, bg-sidebar, bg-primary/10) que ya conmutan automáticamente vía CSS variables.
           
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · screenshots capturadas /login-light, /login-dark, /landing-dark confirman: dark rail sidebar, cards elevadas sin colores quemados, violet accent preservado, gradiente del hero (bg-gradient-to-b from-background to-accent/30) se adapta perfectamente.
+
+  - task: "Bug fix: login redirige a /login?error=session_expired tras Supabase real"
+    implemented: true
+    working: true
+    file: "lib/auth/jwt-claims.ts (nuevo), lib/supabase/middleware.ts, lib/auth/session.ts, tests/unit/middleware-auth.test.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Root cause definitivo (identificado via inspect-jwt.ts decodificando un JWT real):
+            * `supabase.auth.getUser()` expone `user.app_metadata` **desde `auth.users.raw_app_meta_data`** (columna de la DB), NO los claims del access token.
+            * El Custom Access Token Hook 0008 inyecta `session_version` e `is_active` **en los claims del JWT** (top-level y app_metadata), pero Supabase Auth **sobrescribe `app_metadata` del JWT con raw_app_meta_data post-hook**, borrando los campos nuevos que el hook añadió a `app_metadata`.
+            * Resultado: `user.app_metadata.session_version === undefined` → el middleware cae al fallback `-1` → `-1 !== db.session_version (0)` → `session_expired`.
+            * (Para `user_role` e `institution_id` el bug no se manifestaba porque esos campos SÍ están en `raw_app_meta_data` del seed y el SDK los expone.)
+
+          Log del middleware que lo confirmó: `[mw:deny] reason:'session_expired' detail:'jwt=-1 db=0'`.
+
+          Fix aplicado:
+            * **Nuevo** `lib/auth/jwt-claims.ts` — decodifica el access token (edge-runtime safe via atob+TextDecoder) y normaliza claims mergeando top-level + app_metadata con coerción de tipos robusta (handles number vs string). `readCurrentJwtClaims(supabase)` es la API pública.
+            * `lib/supabase/middleware.ts` — reemplazado `claims = user.app_metadata` por `claims = await readCurrentJwtClaims(supabase)`. Mantiene toda la lógica de gates (role, institution, session_version, is_active) sin cambios.
+            * `lib/auth/session.ts` — mismo reemplazo en validateSession(). Eliminado `Number.isFinite` boilerplate (la normalización ahora vive en jwt-claims.ts).
+            * `tests/unit/middleware-auth.test.ts` — actualizado el mock de @supabase/ssr: ahora `getSession()` devuelve un JWT sintético cuyo payload refleja `app_metadata` tanto top-level como anidado, preservando 100% la cobertura de los 10 tests.
+
+          Verificación end-to-end (scripts/smoke-auth.ts):
+            * admin@nocturna.test   → GET /dashboard → 200 ✅
+            * teacher@nocturna.test → GET /dashboard → 200 ✅
+            * student@nocturna.test → GET /dashboard → 200 ✅
+          Typecheck ✅ · unit tests 44/44 ✅ · lint limpio ✅.
+          Ya no se redirige a /login?error=session_expired con sesión válida.
+
+          Scripts de diagnóstico creados para futuras sesiones:
+            * scripts/seed.ts          — seed idempotente del tenant (institución + 3 users + course + task + submission + grade).
+            * scripts/inspect-jwt.ts   — decodifica el JWT emitido por signInWithPassword y compara con la DB.
+            * scripts/smoke-auth.ts    — simula login + /dashboard sin browser, útil para regresiones.
+            * scripts/check-tables.ts  — verifica existencia de tablas y columnas críticas (is_active, session_version).
+
+          Credenciales guardadas en /app/memory/test_credentials.md (password: Nocturna2025!).

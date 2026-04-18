@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ApiError } from '@/lib/errors';
 import type { AuthenticatedContext } from '@/lib/types/auth';
 import type { UserRole } from '@/lib/types/database';
+import { readCurrentJwtClaims } from '@/lib/auth/jwt-claims';
 
 /**
  * Unique, hardened server-side session validator.
@@ -87,15 +88,10 @@ export async function validateSession(): Promise<AuthenticatedContext> {
   }
 
   // 5. Session version parity with the JWT claim.
-  const jwtClaims = (user.app_metadata ?? {}) as {
-    session_version?: number;
-    institution_id?: string;
-    user_role?: UserRole;
-    is_active?: boolean;
-  };
-  const jwtVersion = Number.isFinite(jwtClaims.session_version)
-    ? Number(jwtClaims.session_version)
-    : -1;
+  //    `user.app_metadata` reflects auth.users.raw_app_meta_data — NOT the
+  //    hook-injected claims. Decode the real access token instead.
+  const jwtClaims = (await readCurrentJwtClaims(supabase)) ?? {};
+  const jwtVersion = jwtClaims.session_version ?? -1;
 
   if (jwtVersion !== profile.session_version) {
     throw new SessionValidationError('session_expired');
