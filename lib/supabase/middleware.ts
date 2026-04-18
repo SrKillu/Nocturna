@@ -22,8 +22,19 @@ function isProtectedApi(pathname: string): boolean {
   return pathname.startsWith('/api') && !isPublicApi(pathname);
 }
 
+const PROTECTED_PAGE_PREFIXES = [
+  '/dashboard',
+  '/courses',
+  '/tasks',
+  '/submissions',
+  '/grades',
+  '/admin',
+];
+
 function isProtectedPage(pathname: string): boolean {
-  return pathname.startsWith('/dashboard');
+  return PROTECTED_PAGE_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
 }
 
 function applySecurityHeaders(

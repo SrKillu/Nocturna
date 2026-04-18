@@ -336,3 +336,27 @@ metadata_tests:
   last_result: "44 passed | 13 skipped (57 total)"
   unit_files: 5
   e2e_files: 4
+
+  - task: "PROMPT FRONTEND 1 — Base y Layout (route group unificado)"
+    implemented: true
+    working: true
+    file: "app/(dashboard)/layout.tsx, components/layout/*, lib/hooks/*, lib/rbac/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Refactor de shell completado (opción A · reemplazo limpio):
+            * ELIMINADO: app/dashboard/* (layout, page, admin/, teacher/, student/) y components/dashboard/*.
+            * NUEVO route group app/(dashboard)/ con layout.tsx (sidebar + topbar + auth guard via requireAuth()).
+            * 6 páginas flat: /dashboard, /courses, /tasks, /submissions, /grades, /admin (placeholders listos para módulos).
+            * components/layout/: app-shell, sidebar, mobile-sidebar (Sheet responsive), topbar (avatar+nombre+dropdown logout), page-header, empty-module.
+            * lib/rbac/nav.ts: single source of truth de navegación; entrada "Admin" filtrada por role (admin | super_admin).
+            * lib/rbac/labels.ts: roleLabel compartido.
+            * lib/hooks/use-session.ts: hook client que proyecta app_metadata del JWT.
+            * lib/hooks/use-logout.ts: logout centralizado (API + SDK + redirect).
+            * Admin page re-chequea rol server-side (defensa contra deep-link).
+            * middleware.ts: isProtectedPage ahora cubre los 6 prefijos flat.
+            * Typecheck: 0 errores · Tests: 44 passed | 13 skipped · curl /dashboard, /courses, /admin → 307 redirect a login (correcto en modo placeholder).
