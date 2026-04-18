@@ -7,6 +7,9 @@ import {
   GraduationCap,
   ShieldCheck,
   Users2,
+  FolderArchive,
+  MessageSquare,
+  QrCode,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -34,10 +37,18 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/submissions',  label: 'Entregas',       icon: FileUp },
   { href: '/grades',       label: 'Calificaciones', icon: GraduationCap },
   {
-    href: '/admin/teachers',
+    href: '/teachers',
     label: 'Profesores',
     icon: Users2,
     roles: ['admin', 'super_admin'],
+  },
+  { href: '/materials',    label: 'Materiales',     icon: FolderArchive },
+  { href: '/chat',         label: 'Chat',           icon: MessageSquare },
+  {
+    href: '/invites',
+    label: 'Invitaciones',
+    icon: QrCode,
+    roles: ['admin', 'super_admin', 'teacher'],
   },
   {
     href: '/admin',
@@ -51,10 +62,31 @@ export function navItemsForRole(role: UserRole): NavItem[] {
   return NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
 }
 
+/**
+ * Two visual groups:
+ *   1. "Espacio"  → trabajo diario (cursos, tareas, materiales, chat, …)
+ *   2. "Gestión"  → solo staff (profesores, administración)
+ *
+ * Un item con `roles` configurado se considera privilegiado SOLO si es
+ * exclusivo de admin/super_admin. Materiales / Chat / Invitaciones siguen
+ * en "Espacio" aunque tengan filtro por rol, porque forman parte del flujo
+ * diario de los usuarios (no son tareas administrativas).
+ */
+const ESPACIO_HREFS = new Set<string>([
+  '/dashboard',
+  '/courses',
+  '/tasks',
+  '/submissions',
+  '/grades',
+  '/materials',
+  '/chat',
+  '/invites',
+]);
+
 export function navGroupsForRole(role: UserRole): NavGroup[] {
   const all = navItemsForRole(role);
-  const primary = all.filter((i) => !i.roles);
-  const privileged = all.filter((i) => i.roles);
+  const primary = all.filter((i) => ESPACIO_HREFS.has(i.href));
+  const privileged = all.filter((i) => !ESPACIO_HREFS.has(i.href));
   const groups: NavGroup[] = [{ label: 'Espacio', items: primary }];
   if (privileged.length > 0) groups.push({ label: 'Gestión', items: privileged });
   return groups;

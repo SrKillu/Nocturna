@@ -30,6 +30,11 @@ const PROTECTED_PAGE_PREFIXES = [
   '/submissions',
   '/grades',
   '/admin',
+  '/teachers',
+  '/materials',
+  '/chat',
+  '/invites',
+  '/invite',
 ];
 
 function isProtectedPage(pathname: string): boolean {

@@ -248,6 +248,46 @@ test_plan:
 
 agent_communication:
   - agent: "main"
+  - agent: "main"
+    message: |
+      FEATURE — Integración UI completa + Sistema QR (Módulo 7).
+        1. Sidebar: agregadas 4 entradas → Materiales, Chat, Invitaciones (bajo Espacio)
+           y Profesores (bajo Gestión). Rutas nuevas: /teachers, /materials, /chat, /invites,
+           /invite/[token]. Todas las rutas nuevas agregadas a PROTECTED_PAGE_PREFIXES en
+           lib/supabase/middleware.ts.
+        2. Master-detail reutilizable: components/courses/course-picker-aside.tsx se usa en
+           /materials y /chat para listar cursos del usuario + filtro + selección con
+           ?courseId=... reflejado en la URL. Reutiliza los mismos <CourseMaterialsTab> y
+           <CourseChatTab> que ya existían en la vista de detalle del curso.
+        3. Sistema QR:
+           * SQL idempotente en supabase/migrations/0020_invites.sql (tablas teacher_invites
+             y student_invites + RLS con claims inline). ⚠️ El usuario debe correrlo en su DB.
+           * Service: lib/services/invites.service.ts (list/create/revoke/lookup/consume).
+             Tipos puros extraídos a lib/invites/types.ts para evitar romper 'server-only' al
+             importarse desde client components.
+           * Endpoints: /api/invites/teachers, /api/invites/students (GET+POST),
+             /api/invites/teachers/[id] DELETE, /api/invites/students/[id] DELETE,
+             /api/invites/lookup/[token] GET, /api/invites/consume POST.
+           * UI: InvitesAdminPanel + InvitesTeacherPanel (con shadcn Card/Select),
+             InviteQrCard dibuja el QR en <canvas> usando librería `qrcode`, botones
+             "Copiar enlace" y "Revocar". Página pública autenticada /invite/[token]
+             muestra preview + botón "Aceptar" que llama /consume y (para teachers)
+             refresca sesión Supabase antes de redirigir a /dashboard.
+        4. Auth flow: al consumir invite de teacher actualizamos profiles (role/institution)
+           + app_metadata vía service client + refreshSession desde el browser para que el
+           Custom Access Token Hook emita el nuevo JWT en el próximo request.
+        5. Dependencia nueva: `qrcode` + `@types/qrcode` agregadas a package.json.
+
+      Verificaciones: typecheck ✅, lint ✅, screenshots verificados — sidebar muestra
+      Panel/Cursos/Tareas/Entregas/Calificaciones/Materiales/Chat/Invitaciones y
+      Profesores/Administración; /chat, /materials e /invites renderizan el layout
+      master-detail correctamente con los cursos seed.
+
+      PENDIENTE usuario (no-código):
+        * Correr /app/supabase/migrations/0020_invites.sql en Supabase SQL Editor.
+        * Sin ese SQL, /invites renderiza pero crear/listar invitaciones responde 500.
+
+
     message: |
       Arquitectura + flujo E2E implementados. App corre (home=200, /api/health=200, /dashboard=307).
       Para validar: el usuario debe (1) crear proyecto Supabase, (2) pegar URL + anon + service_role en
