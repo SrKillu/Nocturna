@@ -45,7 +45,15 @@ export default async function CourseDetailPage({
     listCoursePeople(ctx, params.id).catch(() => []),
     listCourseActivity(ctx, params.id).catch(() => []),
   ]);
-  if (!detail) notFound();
+  if (!detail) {
+    // eslint-disable-next-line no-console
+    console.warn('[courses/[id]/page] detail=null → notFound()', {
+      courseId: params.id,
+      role: ctx.role,
+      userId: ctx.userId,
+    });
+    notFound();
+  }
 
   const canEnroll = ctx.role === 'student' && !detail.is_enrolled;
   const accent = accentFor(detail.id);

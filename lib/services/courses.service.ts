@@ -184,17 +184,63 @@ export async function getCourseDetail(
 ): Promise<CourseDetail | null> {
   const supabase = createClient();
 
+  // --- Diagnostics ------------------------------------------------
+  // Log the inputs so we can tell "RLS blocked" from "wrong id" in prod logs.
+  // eslint-disable-next-line no-console
+  console.log('[courses.getCourseDetail] probe', {
+    courseId,
+    role: ctx.role,
+    userId: ctx.userId,
+    institutionId: ctx.institutionId,
+    isValidUuid:
+      typeof courseId === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courseId),
+  });
+
+  if (
+    typeof courseId !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(courseId)
+  ) {
+    // eslint-disable-next-line no-console
+    console.warn('[courses.getCourseDetail] invalid-uuid; bailing out', { courseId });
+    return null;
+  }
+
+  // --- Query the course row ---------------------------------------
+  // IMPORTANT: do NOT embed profiles with a FK hint (e.g. `!courses_teacher_id_fkey`).
+  // The FK name can differ between environments (schema reconcile renames it) and
+  // courses has TWO FKs to profiles (teacher_id + created_by), so an un-hinted
+  // embed is ambiguous. We fetch the teacher in a second step.
   const { data: course, error } = await supabase
     .from('courses')
-    .select(
-      'id, name, description, teacher_id, created_at, teacher:profiles!courses_teacher_id_fkey(id, full_name, email)'
-    )
+    .select('id, name, description, teacher_id, created_at')
     .eq('id', courseId)
     .maybeSingle();
 
-  if (error || !course) return null;
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('[courses.getCourseDetail] supabase error', {
+      courseId,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return null;
+  }
+  if (!course) {
+    // Row genuinely not visible. Can mean: (a) id doesn't exist, (b) RLS hid it.
+    // eslint-disable-next-line no-console
+    console.warn('[courses.getCourseDetail] no-row (RLS hid it OR id not in DB)', {
+      courseId,
+      role: ctx.role,
+      userId: ctx.userId,
+    });
+    return null;
+  }
 
-  const [{ count: enrollmentCount }, { count: taskCount }, tasksRes, ownEnroll] =
+  // --- Sidecar fetches (parallel) --------------------------------
+  const [{ count: enrollmentCount }, { count: taskCount }, tasksRes, ownEnroll, teacherRes] =
     await Promise.all([
       supabase
         .from('enrollments')
@@ -217,16 +263,25 @@ export async function getCourseDetail(
             .eq('course_id', courseId)
             .eq('student_id', ctx.userId)
         : Promise.resolve({ count: 0 }),
+      course.teacher_id
+        ? supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', course.teacher_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
-  const typed = course as unknown as {
+  const typed = course as {
     id: string;
     name: string;
     description: string | null;
     teacher_id: string | null;
     created_at: string;
-    teacher: { id: string; full_name: string | null; email: string } | null;
   };
+
+  const teacher = (teacherRes as { data: { id: string; full_name: string | null; email: string } | null })
+    .data ?? null;
 
   return {
     id: typed.id,
@@ -234,7 +289,7 @@ export async function getCourseDetail(
     description: typed.description,
     teacher_id: typed.teacher_id,
     created_at: typed.created_at,
-    teacher: typed.teacher,
+    teacher,
     enrollment_count: Number(enrollmentCount ?? 0),
     task_count: Number(taskCount ?? 0),
     tasks: (tasksRes.data ?? []) as CourseDetail['tasks'],
@@ -254,55 +309,82 @@ export interface CoursePerson {
  * Returns the teacher (if any) plus every enrolled student for a course.
  * Used by the /courses/[id] "Personas" tab. RLS scopes the call to the
  * caller's tenant automatically.
+ *
+ * Implementation note: we no longer rely on embedded FK-joins
+ * (`profiles!<fk_name>(...)`) because the FK names vary across environments
+ * after schema reconciliations. Separate queries are slightly chattier but
+ * robust and trivial to reason about.
  */
 export async function listCoursePeople(
-  ctx: AuthenticatedContext,
+  _ctx: AuthenticatedContext,
   courseId: string
 ): Promise<CoursePerson[]> {
   const supabase = createClient();
 
-  const { data: course } = await supabase
+  // 1) Course → get teacher_id (if any).
+  const { data: course, error: courseErr } = await supabase
     .from('courses')
-    .select(
-      'teacher_id, teacher:profiles!courses_teacher_id_fkey(id, full_name, email)'
-    )
+    .select('teacher_id')
     .eq('id', courseId)
     .maybeSingle();
+  if (courseErr) {
+    // eslint-disable-next-line no-console
+    console.error('[courses.listCoursePeople] course err', courseErr);
+  }
 
-  const { data: enrollments } = await supabase
+  // 2) Enrollments → list of student ids + their enrolment timestamp.
+  const { data: enrollments, error: enrollErr } = await supabase
     .from('enrollments')
-    .select(
-      'enrolled_at, student:profiles!enrollments_student_id_fkey(id, full_name, email)'
-    )
+    .select('created_at, student_id')
     .eq('course_id', courseId)
-    .order('enrolled_at', { ascending: true });
+    .order('created_at', { ascending: true });
+  if (enrollErr) {
+    // eslint-disable-next-line no-console
+    console.error('[courses.listCoursePeople] enrollments err', enrollErr);
+  }
+
+  // 3) Batch profile lookup for teacher + all students.
+  const ids = new Set<string>();
+  if (course?.teacher_id) ids.add(course.teacher_id as string);
+  for (const e of enrollments ?? []) {
+    if (e.student_id) ids.add(e.student_id as string);
+  }
+  let profiles: Array<{ id: string; full_name: string | null; email: string }> = [];
+  if (ids.size > 0) {
+    const { data: profs, error: profErr } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', [...ids]);
+    if (profErr) {
+      // eslint-disable-next-line no-console
+      console.error('[courses.listCoursePeople] profiles err', profErr);
+    }
+    profiles = profs ?? [];
+  }
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   const people: CoursePerson[] = [];
-  const typedCourse = course as unknown as {
-    teacher_id: string | null;
-    teacher: { id: string; full_name: string | null; email: string } | null;
-  } | null;
-  if (typedCourse?.teacher) {
+  const teacherId = course?.teacher_id as string | null | undefined;
+  if (teacherId && profileById.has(teacherId)) {
+    const t = profileById.get(teacherId)!;
     people.push({
-      id: typedCourse.teacher.id,
-      full_name: typedCourse.teacher.full_name,
-      email: typedCourse.teacher.email,
+      id: t.id,
+      full_name: t.full_name,
+      email: t.email,
       role: 'teacher',
       enrolled_at: null,
     });
   }
-  const typedEnrollments = (enrollments ?? []) as unknown as Array<{
-    enrolled_at: string;
-    student: { id: string; full_name: string | null; email: string } | null;
-  }>;
-  for (const e of typedEnrollments) {
-    if (!e.student) continue;
+  for (const e of enrollments ?? []) {
+    const sid = e.student_id as string;
+    const s = profileById.get(sid);
+    if (!s) continue;
     people.push({
-      id: e.student.id,
-      full_name: e.student.full_name,
-      email: e.student.email,
+      id: s.id,
+      full_name: s.full_name,
+      email: s.email,
       role: 'student',
-      enrolled_at: e.enrolled_at,
+      enrolled_at: (e.created_at as string) ?? null,
     });
   }
   return people;
@@ -320,71 +402,125 @@ export interface CourseActivityItem {
  * Lightweight stream of activity for the course detail page.
  * Aggregates the 3 events users care about: tasks created, submissions
  * received, grades posted. Newest first, capped at 20 items.
+ *
+ * No FK-name embeds (varies per env); all joins done in app code.
+ * Uses `created_at` across the board (the canonical column in the schema).
  */
 export async function listCourseActivity(
-  ctx: AuthenticatedContext,
+  _ctx: AuthenticatedContext,
   courseId: string
 ): Promise<CourseActivityItem[]> {
   const supabase = createClient();
-  const [tasksRes, subsRes, gradesRes] = await Promise.all([
-    supabase
-      .from('tasks')
-      .select('id, title, created_at')
-      .eq('course_id', courseId)
-      .order('created_at', { ascending: false })
-      .limit(10),
-    supabase
-      .from('submissions')
-      .select('id, submitted_at, task:tasks!inner(title, course_id), student:profiles!submissions_student_id_fkey(full_name, email)')
-      .eq('task.course_id', courseId)
-      .order('submitted_at', { ascending: false })
-      .limit(10),
-    supabase
-      .from('grades')
-      .select('id, score, graded_at, submission:submissions!inner(task:tasks!inner(title, course_id), student:profiles!submissions_student_id_fkey(full_name))')
-      .eq('submission.task.course_id', courseId)
-      .order('graded_at', { ascending: false })
-      .limit(10),
-  ]);
+
+  // 1) Tasks in the course.
+  const tasksRes = await supabase
+    .from('tasks')
+    .select('id, title, created_at')
+    .eq('course_id', courseId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (tasksRes.error) {
+    // eslint-disable-next-line no-console
+    console.error('[courses.listCourseActivity] tasks err', tasksRes.error);
+  }
+  const tasks = tasksRes.data ?? [];
+  const taskIds = tasks.map((t) => t.id as string);
+  const taskTitleById = new Map(tasks.map((t) => [t.id as string, t.title as string]));
+
+  // 2) Submissions for those tasks.
+  const subsRes =
+    taskIds.length > 0
+      ? await supabase
+          .from('submissions')
+          .select('id, task_id, student_id, created_at')
+          .in('task_id', taskIds)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : { data: [], error: null };
+  if (subsRes.error) {
+    // eslint-disable-next-line no-console
+    console.error('[courses.listCourseActivity] subs err', subsRes.error);
+  }
+  const subs = (subsRes.data ?? []) as Array<{
+    id: string;
+    task_id: string;
+    student_id: string;
+    created_at: string;
+  }>;
+  const subById = new Map(subs.map((s) => [s.id, s]));
+
+  // 3) Grades for those submissions.
+  const gradesRes =
+    subs.length > 0
+      ? await supabase
+          .from('grades')
+          .select('id, submission_id, score, created_at')
+          .in('submission_id', subs.map((s) => s.id))
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : { data: [], error: null };
+  if (gradesRes.error) {
+    // eslint-disable-next-line no-console
+    console.error('[courses.listCourseActivity] grades err', gradesRes.error);
+  }
+  const grades = (gradesRes.data ?? []) as Array<{
+    id: string;
+    submission_id: string;
+    score: number;
+    created_at: string;
+  }>;
+
+  // 4) Batch profile lookup for every student that appears in subs or grades.
+  const studentIds = new Set<string>();
+  for (const s of subs) studentIds.add(s.student_id);
+  for (const g of grades) {
+    const s = subById.get(g.submission_id);
+    if (s) studentIds.add(s.student_id);
+  }
+  let profiles: Array<{ id: string; full_name: string | null; email: string }> = [];
+  if (studentIds.size > 0) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', [...studentIds]);
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('[courses.listCourseActivity] profiles err', error);
+    }
+    profiles = data ?? [];
+  }
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   const items: CourseActivityItem[] = [];
-  for (const t of tasksRes.data ?? []) {
+  for (const t of tasks) {
     items.push({
       id: `task:${t.id}`,
       kind: 'task_created',
-      title: `Nueva tarea \u2014 ${t.title}`,
+      title: `Nueva tarea — ${t.title}`,
       subtitle: null,
       at: t.created_at as string,
     });
   }
-  const subs = (subsRes.data ?? []) as unknown as Array<{
-    id: string;
-    submitted_at: string;
-    task: { title: string } | null;
-    student: { full_name: string | null; email: string } | null;
-  }>;
   for (const s of subs) {
+    const prof = profileById.get(s.student_id);
     items.push({
       id: `sub:${s.id}`,
       kind: 'submission',
-      title: `Entrega \u2014 ${s.task?.title ?? ''}`,
-      subtitle: s.student?.full_name ?? s.student?.email ?? null,
-      at: s.submitted_at,
+      title: `Entrega — ${taskTitleById.get(s.task_id) ?? ''}`,
+      subtitle: prof?.full_name ?? prof?.email ?? null,
+      at: s.created_at,
     });
   }
-  const grades = (gradesRes.data ?? []) as unknown as Array<{
-    id: string;
-    score: number;
-    graded_at: string;
-    submission: { task: { title: string } | null; student: { full_name: string | null } | null } | null;
-  }>;
   for (const g of grades) {
+    const sub = subById.get(g.submission_id);
+    const prof = sub ? profileById.get(sub.student_id) : null;
+    const taskTitle = sub ? taskTitleById.get(sub.task_id) ?? '' : '';
     items.push({
       id: `grade:${g.id}`,
       kind: 'grade',
-      title: `Calificaci\u00f3n \u2014 ${g.submission?.task?.title ?? ''}`,
-      subtitle: `${g.submission?.student?.full_name ?? ''} \u00b7 ${g.score} pts`,
-      at: g.graded_at,
+      title: `Calificación — ${taskTitle}`,
+      subtitle: `${prof?.full_name ?? prof?.email ?? ''} · ${g.score} pts`,
+      at: g.created_at,
     });
   }
   items.sort((a, b) => (a.at < b.at ? 1 : -1));
