@@ -449,3 +449,28 @@ metadata_tests:
             * components/tasks/task-list-row.tsx: fila con icono, curso, fecha relativa, max score, badge role-aware (Pendiente/Enviada/Calificada/Tarde para student; "N por revisar" para staff).
             * components/tasks/create-task-dialog.tsx (client): Dialog + react-hook-form + Zod local (acepta datetime-local, convierte a ISO); Select de curso filtrado (teacher → solo sus cursos); input maxScore numérico; toast + refresh.
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /tasks y /tasks/[id] → 307 a login en modo placeholder.
+
+  - task: "PROMPT FRONTEND 6 — Entregas (drag & drop + historial + 3-step upload)"
+    implemented: true
+    working: true
+    file: "app/(dashboard)/submissions/page.tsx, app/(dashboard)/tasks/[id]/page.tsx, lib/services/submissions.service.ts, components/submissions/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Módulo de Entregas completo con flujo seguro 3-step:
+            * components/submissions/submission-uploader.tsx (client, cross-module): state machine por fase (idle→requesting→uploading→confirming→submitting→done/error). Drag & drop con Enter/Space, validación cliente MIME+tamaño, XHR PUT con onprogress para barra real, llamadas encadenadas:
+                1. POST /api/files/upload   → {fileId, signedUrl, path}
+                2. PUT directo a Storage (barra %)
+                3. POST /api/files/confirm  → magic-byte verification
+                4. POST /api/tasks/:id/submissions → filePath + comentario
+               Si confirmación devuelve 'blocked' → aborta con mensaje claro.
+            * lib/services/submissions.service.ts: añadidos listMySubmissions (student) y listSubmissionsForReview (teacher→own courses, admin→tenant) con joins a tasks/courses/profiles/grades.
+            * app/(dashboard)/submissions/page.tsx: listado role-aware con SubmissionStatusFilter (URL ?status=). Muestra curso, tarea, fecha, autor (para staff), archivo adjunto, calificación N/Max.
+            * components/submissions/submission-row.tsx: fila con icono, status badge (Calificada/Enviada/Tarde/Devuelta), grade_score/grade_max.
+            * components/submissions/submission-status-filter.tsx (client): Select que hace router.push a ?status=.
+            * app/(dashboard)/tasks/[id]/page.tsx: inyectado SubmissionUploader para students (server→client boundary correcta); existingStatus='graded' deshabilita el formulario.
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /submissions → 307 a login en modo placeholder.

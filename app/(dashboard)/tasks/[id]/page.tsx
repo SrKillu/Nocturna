@@ -10,6 +10,8 @@ import {
   FileText,
   Target,
 } from 'lucide-react';
+import { SubmissionUploader } from '@/components/submissions/submission-uploader';
+
 import { requireAuth } from '@/lib/api/auth';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { getTaskDetail } from '@/lib/services/tasks.service';
@@ -94,11 +96,18 @@ export default async function TaskDetailPage({
       </section>
 
       {ctx.role === 'student' ? (
+        <SubmissionUploader
+          taskId={detail.id}
+          existingStatus={detail.own_submission?.status ?? null}
+        />
+      ) : null}
+
+      {ctx.role === 'student' ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Tu entrega</CardTitle>
             <CardDescription>
-              Puedes enviar tu trabajo desde el módulo de entregas (próximamente).
+              Historial del estado de tu entrega para esta tarea.
             </CardDescription>
           </CardHeader>
           <CardContent>
