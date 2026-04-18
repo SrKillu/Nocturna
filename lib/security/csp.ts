@@ -39,6 +39,16 @@ export function buildCsp(nonce: string): string {
     ...(isDev ? ['ws:', 'http://localhost:*'] : []),
   ];
 
+  // Frame-ancestors: allowlist for iframe embedding. We block everything except
+  // the current origin and the Emergent preview host. `X-Frame-Options` is not
+  // used (deprecated, can't express allowlists) — this CSP directive supersedes
+  // it in every modern browser.
+  const frameAncestors = [
+    "'self'",
+    'https://*.emergentagent.com',
+    'https://*.preview.emergentagent.com',
+  ];
+
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': scriptSrc,
@@ -46,7 +56,7 @@ export function buildCsp(nonce: string): string {
     'img-src': imgSrc,
     'font-src': ["'self'", 'data:'],
     'connect-src': connectSrc,
-    'frame-ancestors': ["'none'"],
+    'frame-ancestors': frameAncestors,
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
     'object-src': ["'none'"],

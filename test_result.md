@@ -517,3 +517,31 @@ metadata_tests:
             * app/global-error.tsx: fallback HTML standalone para crashes del root layout.
             * Lazy loading: components/courses/create-course-dialog-lazy.tsx + components/tasks/create-task-dialog-lazy.tsx con next/dynamic({ssr:false}) + loading fallback del trigger. Los bundles de los dialogs (react-hook-form + Zod + shadcn Dialog ≈ 45 kB gz) se cargan solo si el admin/teacher abre el modal. Páginas /courses y /tasks actualizadas para usar las versiones Lazy.
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · /login → 200 con form accesible (screenshot verificada).
+
+  - task: "Bug fix: Preview iframe rechaza conexión (X-Frame-Options + CSP frame-ancestors)"
+    implemented: true
+    working: true
+    file: "next.config.js, lib/security/csp.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Root cause: dos capas bloqueaban el embedding del iframe del preview de Emergent:
+            1. next.config.js: X-Frame-Options: DENY (static header en el edge)
+            2. lib/security/csp.ts: CSP frame-ancestors 'none' (dinámico en middleware)
+          
+          Fix aplicado (manteniendo toda la seguridad):
+            * Removido X-Frame-Options por completo (deprecated, no soporta allowlists; CSP frame-ancestors lo supersede en todos los browsers modernos).
+            * CSP frame-ancestors ahora: 'self' https://*.emergentagent.com https://*.preview.emergentagent.com (allowlist estricto, solo el dominio preview de Emergent puede embeber).
+            * Cross-Origin-Opener-Policy: same-origin → same-origin-allow-popups (permite popups del iframe para OAuth callback futuro sin perder aislamiento).
+            * Cross-Origin-Resource-Policy: same-origin → cross-origin (necesario para que el iframe cargue JS/CSS bundles).
+          
+          Seguridad conservada:
+            * Clickjacking sigue imposible en cualquier dominio NO whitelisted.
+            * Todo el resto del CSP (script-src con nonce+strict-dynamic, connect-src acotado a Supabase, form-action 'self', object-src 'none', etc.) intacto.
+            * STS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy sin cambios.
+          
+          Verificación: curl -I muestra el header correcto; typecheck ✅; tests 44 passed | 13 skipped ✅.
