@@ -88,7 +88,7 @@ export function CourseCard({
             className={cn(
               'inline-flex items-center gap-1 rounded-full px-2 py-0.5',
               status === 'active'
-                ? 'bg-emerald-100 text-emerald-700'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                 : 'bg-muted text-muted-foreground'
             )}
           >

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Globe, LogOut, Menu, Sparkles } from 'lucide-react';
 import type { AppShellUser } from '@/components/layout/app-shell';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface TopbarProps {
   user: AppShellUser;
@@ -95,7 +96,7 @@ export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {canCreate ? (
           <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
             <Link href={user.role === 'teacher' ? '/tasks' : '/courses'}>
@@ -104,6 +105,7 @@ export function Topbar({ user, onOpenMobileNav }: TopbarProps) {
             </Link>
           </Button>
         ) : null}
+        <ThemeToggle />
         <div className="hidden text-right md:block">
           <p className="text-sm font-medium leading-none">{displayName}</p>
           <p className="text-xs text-muted-foreground">{user.email}</p>

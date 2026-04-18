@@ -79,11 +79,11 @@ export function CourseStream({ items }: CourseStreamProps) {
 function describe(kind: CourseActivityItem['kind']): { Icon: LucideIcon; tint: string } {
   switch (kind) {
     case 'task_created':
-      return { Icon: ClipboardList, tint: 'bg-violet-100 text-violet-700' };
+      return { Icon: ClipboardList, tint: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300' };
     case 'submission':
-      return { Icon: FileUp, tint: 'bg-sky-100 text-sky-700' };
+      return { Icon: FileUp, tint: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300' };
     case 'grade':
-      return { Icon: BookOpenCheck, tint: 'bg-emerald-100 text-emerald-700' };
+      return { Icon: BookOpenCheck, tint: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' };
     default:
       return { Icon: Activity, tint: 'bg-muted text-muted-foreground' };
   }

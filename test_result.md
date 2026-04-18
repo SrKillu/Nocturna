@@ -577,3 +577,26 @@ metadata_tests:
             * components/dashboard/courses-card.tsx: mini-hero tiles 2 col con gradient initial + chevron animado.
           
           Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · screenshots confirman landing + login con design premium (violet accent, spacing amplio, rounded-xl, sombras suaves, jerarquía tipográfica clara).
+
+  - task: "Dark mode completo con next-themes + toggle animado + transiciones suaves"
+    implemented: true
+    working: true
+    file: "app/layout.tsx, components/theme-provider.tsx, components/theme-toggle.tsx, components/layout/topbar.tsx, app/(auth)/layout.tsx, app/globals.css, components/courses/course-card.tsx, components/courses/course-stream.tsx, components/submissions/submission-uploader.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Dark mode production-quality implementado end-to-end:
+            * components/theme-provider.tsx: wrapper de next-themes con attribute="class", defaultTheme="system", enableSystem, storageKey="nocturna.theme" (evita colisiones con otras apps).
+            * components/theme-toggle.tsx: trigger con Sun/Moon cross-fade (300ms absolute + rotate+scale+opacity), dropdown con 3 opciones Claro/Oscuro/Sistema, indicador de dot primary en la opción activa; añade/remueve `.theme-transition` en <html> por 220ms para un crossfade suave sin lag permanente.
+            * app/layout.tsx: <html lang="es" suppressHydrationWarning> ya estaba; envuelvo children en <ThemeProvider>.
+            * app/globals.css: completadas variables sidebar-* para .dark (Teams-style rail un tono más profundo que card); regla scoped `html.theme-transition *` que aplica transition-property solo mientras se cambia (no afecta hover/focus).
+            * components/layout/topbar.tsx: ThemeToggle integrado entre quick-action y avatar; spacing responsive (gap-2 sm:gap-3).
+            * app/(auth)/layout.tsx: ThemeToggle fixed top-right para no-autenticados.
+            * Dark polish para clases hardcodeadas: bg-emerald-100/violet-100/sky-100 → + dark:bg-<color>-500/15|20 + dark:text-<color>-300 en course-card.tsx, course-stream.tsx, submission-uploader.tsx.
+            * Todo el resto del UI usa tokens semánticos (bg-background, bg-card, text-foreground, border-border, bg-muted, text-muted-foreground, bg-sidebar, bg-primary/10) que ya conmutan automáticamente vía CSS variables.
+          
+          Verificación: typecheck ✅ · tests 44 passed | 13 skipped ✅ · screenshots capturadas /login-light, /login-dark, /landing-dark confirman: dark rail sidebar, cards elevadas sin colores quemados, violet accent preservado, gradiente del hero (bg-gradient-to-b from-background to-accent/30) se adapta perfectamente.

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { Moon } from 'lucide-react';
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 /**
  * Shared shell for every public auth page (/login, /signup).
@@ -27,7 +28,10 @@ export default async function AuthLayout({
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-accent/30 px-4 py-10">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-accent/30 px-4 py-10">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <Link
         href="/"
         className="mb-8 flex items-center gap-2 text-sm font-semibold text-foreground"

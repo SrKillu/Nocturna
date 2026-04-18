@@ -59,10 +59,29 @@
     --border: 240 4% 16%;
     --input: 240 4% 16%;
     --ring: 250 90% 66%;
+    /* Teams-style sidebar: a touch deeper than card so the nav surface reads
+       as a distinct rail even in dark mode. */
+    --sidebar-background: 240 10% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 250 90% 66%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 240 4% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 250 90% 66%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground antialiased; }
+
+  /* Smooth theme transition — only on the tokens that swap between light/dark,
+     not on every property (which would make menus / popovers feel sluggish). */
+  html.theme-transition,
+  html.theme-transition * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
 }
