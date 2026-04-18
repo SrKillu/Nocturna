@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
 /**
- * MIME whitelist for the `submissions` bucket.
- * Keep the list narrow. If you add a type, also audit it server-side.
+ * Storage buckets allowed by the API. Matches 0010_storage_hardening.sql.
+ */
+export const FILE_BUCKETS = ['submissions', 'avatars', 'resources'] as const;
+export type FileBucket = (typeof FILE_BUCKETS)[number];
+
+/**
+ * Narrow MIME whitelist. Keep this list small. Never accept octet-stream.
  */
 export const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -20,19 +25,30 @@ export const ALLOWED_MIME_TYPES = [
   'image/webp',
 ] as const;
 
-export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024; // 20 MB
+export const MIME_TO_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+  'text/markdown': 'md',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
 
-/** Safe filename: ASCII + basic punctuation, no path separators. */
-const FILENAME_RE = /^[a-zA-Z0-9._\-\s]{1,200}$/;
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB (hardened from 20)
 
 export const uploadRequestSchema = z.object({
-  taskId: z.string().uuid(),
-  filename: z
-    .string()
-    .trim()
-    .min(1)
-    .max(200)
-    .regex(FILENAME_RE, 'Filename contains invalid characters'),
+  bucket: z.enum(FILE_BUCKETS),
+  // Required when bucket === 'submissions', ignored otherwise at the service layer.
+  taskId: z.string().uuid().optional(),
+  /** Client-provided filename. We NEVER use this value on disk. Only kept for audit. */
+  originalName: z.string().trim().min(1).max(200).optional(),
   mimeType: z
     .string()
     .trim()
@@ -47,7 +63,13 @@ export const uploadRequestSchema = z.object({
 });
 export type UploadRequestInput = z.infer<typeof uploadRequestSchema>;
 
-export const signedUrlQuerySchema = z.object({
+export const confirmUploadSchema = z.object({
+  fileId: z.string().uuid(),
+});
+export type ConfirmUploadInput = z.infer<typeof confirmUploadSchema>;
+
+export const downloadQuerySchema = z.object({
+  bucket: z.enum(FILE_BUCKETS),
   path: z
     .string()
     .trim()
@@ -55,4 +77,4 @@ export const signedUrlQuerySchema = z.object({
     .max(500)
     .regex(/^[a-zA-Z0-9/_.\-]+$/, 'Invalid storage path'),
 });
-export type SignedUrlQuery = z.infer<typeof signedUrlQuerySchema>;
+export type DownloadQuery = z.infer<typeof downloadQuerySchema>;
