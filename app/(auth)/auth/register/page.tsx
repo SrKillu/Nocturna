@@ -77,6 +77,10 @@ function RegisterPageInner() {
           role,
           token: effectiveToken,
         };
+
+        // ── 1. Crear cuenta ────────────────────────────────────────
+        // eslint-disable-next-line no-console
+        console.log('[register] start', { email: payload.email, role, hasToken: !!effectiveToken });
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -90,41 +94,109 @@ function RegisterPageInner() {
             enrolledCourseId: string | null;
             tokenConsumed: boolean;
           };
-          error?: { message?: string };
+          error?: { message?: string; code?: string };
         };
         if (!res.ok || !json.data) {
-          toast.error(json.error?.message ?? 'No se pudo completar el registro');
+          // eslint-disable-next-line no-console
+          console.error('[register] failed', { status: res.status, error: json.error });
+          toast.error(json.error?.message ?? 'No se pudo completar el registro', {
+            description: json.error?.code,
+          });
           return;
         }
+        // eslint-disable-next-line no-console
+        console.log('[register] success', json.data);
 
-        // Iniciamos sesión automáticamente con las credenciales recién creadas.
+        // ── 2. Iniciar sesión + esperar que la sesión esté lista ──
         const sb = createClient();
         const { error: loginErr } = await sb.auth.signInWithPassword({
           email: form.email.trim(),
           password: form.password,
         });
         if (loginErr) {
+          // eslint-disable-next-line no-console
+          console.error('[register] login failed', loginErr);
           toast.message('Cuenta creada', {
-            description: 'Iniciamos sesión manual: por favor, inicia sesión.',
+            description: 'Por favor inicia sesión manualmente.',
           });
           router.push('/login');
           return;
         }
+        // Polling breve: esperamos getSession() 3x/300ms para que la cookie
+        // esté disponible en el próximo request (evita race conditions).
+        let sessionReady = false;
+        for (let i = 0; i < 3; i += 1) {
+          const { data } = await sb.auth.getSession();
+          if (data.session?.access_token) {
+            sessionReady = true;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        // eslint-disable-next-line no-console
+        console.log('[register] session ready =', sessionReady);
 
-        // Decidimos a dónde enviar al usuario en función del resultado.
-        if (json.data.enrolledCourseId) {
+        // ── 3. Fallback: si había token pero el backend NO lo consumió,
+        //      llamamos /api/invites/consume explícitamente. ─────────
+        let finalCourseId = json.data.enrolledCourseId;
+        if (effectiveToken && !json.data.tokenConsumed) {
+          // eslint-disable-next-line no-console
+          console.log('[register] token not consumed by backend, calling consume fallback');
+          try {
+            const cr = await fetch('/api/invites/consume', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ token: effectiveToken }),
+            });
+            const cj = (await cr.json().catch(() => ({}))) as {
+              data?: { kind: 'teacher' | 'student'; courseId: string | null };
+              error?: { message?: string };
+            };
+            if (cr.ok && cj.data) {
+              // eslint-disable-next-line no-console
+              console.log('[register] consume fallback OK', cj.data);
+              finalCourseId = cj.data.courseId ?? finalCourseId;
+            } else {
+              // eslint-disable-next-line no-console
+              console.error('[register] consume fallback failed', cj.error);
+              toast.error('Cuenta creada, pero no pudimos aceptar la invitación', {
+                description: cj.error?.message,
+              });
+              router.push('/auth/pending');
+              return;
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('[register] consume fallback threw', err);
+          }
+        }
+
+        // ── 4. Redirección según resultado ─────────────────────────
+        if (finalCourseId) {
           toast.success('¡Bienvenido! Inscripción completada.');
-          router.replace(`/courses/${json.data.enrolledCourseId}`);
+          // Refrescamos la capa RSC para que la página destino vea el enrollment.
+          try {
+            await sb.auth.refreshSession();
+          } catch {
+            /* noop */
+          }
+          router.refresh();
+          setTimeout(() => {
+            window.location.href = `/courses/${finalCourseId}`;
+          }, 300);
         } else if (json.data.institutionId) {
           toast.success('¡Cuenta lista!');
-          router.replace('/dashboard');
+          router.refresh();
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 300);
         } else {
           toast.message('Cuenta creada', {
             description: 'Necesitás un código de invitación para continuar.',
           });
           router.replace('/auth/pending');
         }
-        router.refresh();
       } finally {
         setLoading(false);
       }

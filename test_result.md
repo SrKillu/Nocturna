@@ -250,6 +250,39 @@ agent_communication:
   - agent: "main"
   - agent: "main"
     message: |
+      BUGFIX — Registro con invitación + error CSRF `missing_token`.
+
+      ① CSRF FIX
+        * `/api/auth/register` agregado a `ECHO_EXEMPT_PREFIXES` en
+          lib/security/csrf.ts (al lado de `/api/auth/signup` y `/api/auth/logout`).
+          El endpoint es público y se hit antes de que exista la cookie CSRF.
+          La defensa sigue siendo el Origin/Referer check.
+        * Verificado con curl: POST /api/auth/register sin token CSRF → 201 ✅
+        * (El resto del sistema mantiene el double-submit cookie activo.)
+
+      ② REGISTRO CON TOKEN — FLUJO POST-REGISTER ROBUSTO
+        Actualizado `app/(auth)/auth/register/page.tsx::submit` con:
+          1. `[register] start` log con payload redacted.
+          2. POST /api/auth/register → log `[register] success` o `[register] failed`.
+          3. `signInWithPassword` + **polling de getSession 3×300ms** para garantizar
+             que la cookie esté persistida antes del próximo request.
+          4. **Fallback de consume**: si hay `effectiveToken` Y `tokenConsumed === false`
+             (el service no pudo consumir), se llama explícitamente a
+             POST /api/invites/consume → log `[register] consume fallback OK` o error.
+          5. Redirect final con `window.location.href` (hard nav) después de
+             `router.refresh()` + `refreshSession()` para evitar cache RSC con el
+             JWT antiguo. `/courses/[id]` para student · `/dashboard` para teacher ·
+             `/auth/pending` si algo no se resolvió.
+          6. Errores explícitos con toasts + console.error (no más redirect silencioso).
+
+      RESULTADO: QR → /auth/register?token=XYZ → cuenta creada → consume ejecutado
+      (atómico en backend con fallback en frontend) → enrollment en DB → redirect al curso.
+
+      NO SE MODIFICÓ: DB, invites.service.ts, auth.service.ts (ya funcionan).
+
+
+  - agent: "main"
+    message: |
       FEATURE — Registro público (student + teacher self-service).
 
       ① REGISTRO PÚBLICO

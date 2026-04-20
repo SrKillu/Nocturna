@@ -21,6 +21,7 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const ECHO_EXEMPT_PREFIXES: readonly string[] = [
   '/api/auth/signup',
+  '/api/auth/register',
   '/api/auth/logout',
   '/auth/callback',
 ];
