@@ -55,19 +55,30 @@ export function InvitesAdminPanel({ initialInvites }: Props) {
     }
   }
 
-  async function revoke(id: string) {
-    if (!window.confirm('¿Revocar esta invitación? No podrá utilizarse.')) return;
+  async function revokeOrDelete(id: string) {
+    const current = invites.find((i) => i.id === id);
+    const isRevoked = current?.revoked === true;
+    const label = isRevoked ? 'eliminar definitivamente' : 'revocar';
+    if (!window.confirm(`¿Seguro que querés ${label} esta invitación?`)) return;
     setRevokingId(id);
     try {
       const res = await apiFetch(`/api/invites/teachers/${id}`, { method: 'DELETE' });
+      const json = (await res.json().catch(() => ({}))) as {
+        data?: { deleted?: boolean };
+      };
       if (!res.ok) {
-        toast.error('No se pudo revocar');
+        toast.error(isRevoked ? 'No se pudo eliminar' : 'No se pudo revocar');
         return;
       }
-      setInvites((prev) =>
-        prev.map((i) => (i.id === id ? { ...i, revoked: true } : i))
-      );
-      toast.success('Invitación revocada');
+      if (json.data?.deleted) {
+        setInvites((prev) => prev.filter((i) => i.id !== id));
+        toast.success('Invitación eliminada');
+      } else {
+        setInvites((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, revoked: true } : i))
+        );
+        toast.success('Invitación revocada');
+      }
     } finally {
       setRevokingId(null);
     }
@@ -139,7 +150,8 @@ export function InvitesAdminPanel({ initialInvites }: Props) {
                   day: '2-digit',
                   month: 'short',
                 })}`}
-                onRevoke={() => revoke(inv.id)}
+                onRevoke={() => revokeOrDelete(inv.id)}
+                onDelete={() => revokeOrDelete(inv.id)}
                 revoking={revokingId === inv.id}
               />
             ))}

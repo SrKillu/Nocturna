@@ -22,6 +22,8 @@ import { CourseTasksTab } from '@/components/courses/course-tasks-tab';
 import { CourseMaterialsTab } from '@/components/courses/course-materials-tab';
 import { CourseGradesTab } from '@/components/courses/course-grades-tab';
 import { CourseChatTab } from '@/components/courses/course-chat-tab';
+import { CourseStudentsTab } from '@/components/courses/course-students-tab';
+import { CourseDailyWorkTab } from '@/components/courses/course-daily-work-tab';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,9 +136,13 @@ export default async function CourseDetailPage({
         <TabsList className="w-full justify-start gap-1 bg-card">
           <TabsTrigger value="stream">Novedades</TabsTrigger>
           <TabsTrigger value="tasks">Tareas</TabsTrigger>
+          <TabsTrigger value="daily-work">Trabajos</TabsTrigger>
           <TabsTrigger value="materials">Materiales</TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
           <TabsTrigger value="grades">Notas</TabsTrigger>
+          {ctx.role !== 'student' ? (
+            <TabsTrigger value="students">Estudiantes</TabsTrigger>
+          ) : null}
           <TabsTrigger value="people">Personas</TabsTrigger>
         </TabsList>
 
@@ -147,6 +153,24 @@ export default async function CourseDetailPage({
         <TabsContent value="tasks" className="space-y-4">
           <CourseTasksTab tasks={detail.tasks} courseId={detail.id} role={ctx.role} />
         </TabsContent>
+
+        <TabsContent value="daily-work" className="space-y-4">
+          <CourseDailyWorkTab
+            courseId={detail.id}
+            role={ctx.role}
+            canManage={
+              ctx.role === 'admin' ||
+              ctx.role === 'super_admin' ||
+              (ctx.role === 'teacher' && detail.teacher_id === ctx.userId)
+            }
+          />
+        </TabsContent>
+
+        {ctx.role !== 'student' ? (
+          <TabsContent value="students" className="space-y-4">
+            <CourseStudentsTab courseId={detail.id} />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="people" className="space-y-4">
           <CoursePeople people={people} />

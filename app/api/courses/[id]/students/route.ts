@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/api/auth';
-import { revokeTeacherInvite } from '@/lib/services/invites.service';
+import { listCourseStudents } from '@/lib/services/students.service';
 import { toApiErrorResponse } from '@/lib/errors';
 
 export const runtime = 'nodejs';
 
-export async function DELETE(
+export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
     const ctx = await requireAuth();
-    requireRole(ctx, ['admin', 'super_admin']);
-    const result = await revokeTeacherInvite(ctx, params.id);
-    return NextResponse.json({ data: { ok: true, ...result } });
+    requireRole(ctx, ['admin', 'super_admin', 'teacher']);
+    const data = await listCourseStudents(ctx, params.id);
+    return NextResponse.json({ data });
   } catch (err) {
     return toApiErrorResponse(err);
   }

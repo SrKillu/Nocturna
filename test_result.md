@@ -250,6 +250,55 @@ agent_communication:
   - agent: "main"
   - agent: "main"
     message: |
+      FEATURE — Módulos incrementales 1-3 (Estudiantes · Limpieza Invitaciones · Trabajos cotidianos).
+
+      ① ESTUDIANTES POR CURSO
+        * lib/services/students.service.ts · listCourseStudents(ctx, courseId) con
+          ownership check (staff o teacher del curso).
+        * GET /api/courses/[id]/students con requireRole(['admin','super_admin','teacher']).
+        * components/courses/course-students-tab.tsx → tabla nombre/email/fecha + empty state.
+        * Pestaña "Estudiantes" solo visible para role !== 'student'.
+
+      ② LIMPIEZA DE INVITACIONES
+        * revokeTeacherInvite / revokeStudentInvite ahora devuelven {deleted:boolean} y
+          aplican semántica dual:
+            - 1er DELETE sobre invite activa → set revoked=true (soft)
+            - 2do DELETE sobre invite ya revocada → DELETE real (hard)
+        * InviteQrCard: botón "Revocar" (activo) → "Eliminar" (revocado) con confirm.
+        * invites-admin-panel + invites-teacher-panel distinguen toast + mutación local.
+
+      ③ TRABAJOS COTIDIANOS (módulo paralelo más liviano que tareas)
+        * SQL: supabase/migrations/0022_daily_work.sql (2 tablas + RLS + índices + unique
+          constraint (work_id, student_id) para upsert de respuesta). ⚠️ Usuario debe aplicarlo.
+        * lib/services/daily-work.service.ts · list/create/delete/submit/listSubmissions
+          con assertCanManageCourse + assertEnrolledOrStaff.
+        * Endpoints:
+            GET  /api/courses/[id]/daily-work            (listar, enriquecido con my_submission y count)
+            POST /api/courses/[id]/daily-work            (teacher/admin crea)
+            POST /api/daily-work/[id]/submit             (student envía/actualiza respuesta — upsert)
+            GET  /api/daily-work/[id]                    (teacher ve todas las respuestas)
+            DELETE /api/daily-work/[id]                  (teacher elimina)
+        * components/courses/course-daily-work-tab.tsx: UI unificada expandible
+            - teacher: formulario "Publicar trabajo" + lista colapsable + panel de respuestas
+              por trabajo al expandir.
+            - student: lista con badge "Entregada" + textarea para responder/editar.
+        * Pestaña "Trabajos" visible para todos los roles.
+
+      Verificaciones: typecheck ✅ · lint ✅ · screenshots verificados (tabs Trabajos y
+      Estudiantes renderizan correctamente para role=teacher).
+
+      PENDIENTE usuario:
+        * Correr /app/supabase/migrations/0022_daily_work.sql en Supabase SQL Editor.
+        * Sin ese SQL, /api/courses/[id]/daily-work devolverá 500.
+
+      PRÓXIMAS ITERACIONES (no incluidas aquí):
+        * Módulo 4 — Chat privado 1-a-1 (requiere rediseño: conversations + participants).
+        * Módulo 5 — Roles definidos (auditar requireRole en endpoints + UI conditional).
+        * Fase 2 — RLS audit + rate limit invites/chat + reemplazar listUsers → getUserByEmail.
+
+
+  - agent: "main"
+    message: |
       FEATURE — Integración UI completa + Sistema QR (Módulo 7).
         1. Sidebar: agregadas 4 entradas → Materiales, Chat, Invitaciones (bajo Espacio)
            y Profesores (bajo Gestión). Rutas nuevas: /teachers, /materials, /chat, /invites,

@@ -87,16 +87,35 @@ export async function createTeacherInvite(
 export async function revokeTeacherInvite(
   ctx: AuthenticatedContext,
   inviteId: string
-): Promise<void> {
+): Promise<{ deleted: boolean }> {
   if (!isStaff(ctx)) {
     throw new ApiError('FORBIDDEN', 'Solo admins pueden revocar invitaciones de profesor');
   }
   const sb = createClient();
+  const { data: inv, error: selErr } = await sb
+    .from('teacher_invites')
+    .select('id, revoked')
+    .eq('id', inviteId)
+    .maybeSingle();
+  if (selErr) throw new ApiError('INTERNAL_ERROR', selErr.message);
+  if (!inv) throw new ApiError('NOT_FOUND', 'Invitación no encontrada');
+
+  // Semántica dual: si ya estaba revocada, hace DELETE real (limpieza).
+  if (inv.revoked) {
+    const { error: delErr } = await sb
+      .from('teacher_invites')
+      .delete()
+      .eq('id', inviteId);
+    if (delErr) throw new ApiError('INTERNAL_ERROR', delErr.message);
+    return { deleted: true };
+  }
+
   const { error } = await sb
     .from('teacher_invites')
     .update({ revoked: true })
     .eq('id', inviteId);
   if (error) throw new ApiError('INTERNAL_ERROR', error.message);
+  return { deleted: false };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -184,21 +203,31 @@ export async function createStudentInvite(
 export async function revokeStudentInvite(
   ctx: AuthenticatedContext,
   inviteId: string
-): Promise<void> {
+): Promise<{ deleted: boolean }> {
   const sb = createClient();
-  // Validar que el token pertenezca al tenant & que el caller pueda gestionarlo
   const { data: inv } = await sb
     .from('student_invites')
-    .select('id, course_id')
+    .select('id, course_id, revoked')
     .eq('id', inviteId)
     .maybeSingle();
   if (!inv) throw new ApiError('NOT_FOUND', 'Invitación no encontrada');
   await assertCanManageCourse(ctx, inv.course_id as string);
+
+  if (inv.revoked) {
+    const { error } = await sb
+      .from('student_invites')
+      .delete()
+      .eq('id', inviteId);
+    if (error) throw new ApiError('INTERNAL_ERROR', error.message);
+    return { deleted: true };
+  }
+
   const { error } = await sb
     .from('student_invites')
     .update({ revoked: true })
     .eq('id', inviteId);
   if (error) throw new ApiError('INTERNAL_ERROR', error.message);
+  return { deleted: false };
 }
 
 // ─────────────────────────────────────────────────────────────────────

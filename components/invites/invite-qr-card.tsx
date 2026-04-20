@@ -16,7 +16,12 @@ interface Props {
   expiresAt: string;
   title: string;
   subtitle?: string | null;
+  /**
+   * Acción unificada: primera pulsación = revocar, segunda (cuando
+   * `status === 'revoked'`) = eliminar definitivamente.
+   */
   onRevoke?: () => void;
+  onDelete?: () => void;
   revoking?: boolean;
   /** Si `true`, oculta las acciones destructivas. */
   readOnly?: boolean;
@@ -47,6 +52,7 @@ export function InviteQrCard({
   title,
   subtitle,
   onRevoke,
+  onDelete,
   revoking,
   readOnly,
 }: Props) {
@@ -131,6 +137,17 @@ export function InviteQrCard({
               disabled={revoking}
             >
               {revoking ? 'Revocando…' : 'Revocar'}
+            </Button>
+          ) : null}
+          {onDelete && !readOnly && status === 'revoked' ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={onDelete}
+              disabled={revoking}
+            >
+              {revoking ? 'Eliminando…' : 'Eliminar'}
             </Button>
           ) : null}
           {!url ? (

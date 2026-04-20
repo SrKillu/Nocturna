@@ -12,8 +12,8 @@ export async function DELETE(
   try {
     const ctx = await requireAuth();
     requireRole(ctx, ['admin', 'super_admin', 'teacher']);
-    await revokeStudentInvite(ctx, params.id);
-    return NextResponse.json({ data: { ok: true } });
+    const result = await revokeStudentInvite(ctx, params.id);
+    return NextResponse.json({ data: { ok: true, ...result } });
   } catch (err) {
     return toApiErrorResponse(err);
   }
