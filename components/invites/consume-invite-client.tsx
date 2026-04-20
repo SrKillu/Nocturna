@@ -52,7 +52,12 @@ export function ConsumeInviteClient({ token, status, kind }: Props) {
         }, 400);
       } else if (json.data.courseId) {
         toast.success('Inscripción completada');
-        router.push(`/courses/${json.data.courseId}`);
+        // Forzamos refresh de la capa RSC para invalidar el cache de /courses
+        // antes del push, para que la página destino vea el nuevo enrollment.
+        router.refresh();
+        setTimeout(() => {
+          router.push(`/courses/${json.data!.courseId}`);
+        }, 200);
       } else {
         router.push('/dashboard');
       }

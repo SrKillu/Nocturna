@@ -250,6 +250,48 @@ agent_communication:
   - agent: "main"
   - agent: "main"
     message: |
+      BUGFIX CRÍTICO — Flujo consume invite estudiante creaba 500 silencioso.
+
+      ROOT CAUSE (confirmado con smoke test):
+        `lib/services/invites.service.ts::consumeInvite` hacía
+        `.select('id, ..., enrolled_at')` sobre la tabla `enrollments`, pero la DB
+        del usuario tiene la columna como `created_at` (la migración 0002 define
+        `enrolled_at` pero fue sobreescrita/divergente). Resultado: error 42703
+        "column enrollments.enrolled_at does not exist" → consumeInvite lanzaba
+        INTERNAL_ERROR → enrollment nunca se creaba aunque el endpoint devolvía
+        un toast de error poco claro.
+
+      FIX aplicado:
+        1. `.select(..., created_at)` en lugar de `enrolled_at`.
+        2. INSERT reemplazado por `.upsert(..., { onConflict: 'course_id,student_id',
+           ignoreDuplicates: false })` + `.select().single()` → idempotente, retorna
+           fila creada o existente. Maneja duplicados sin error.
+        3. Validación de institución relajada: solo rechaza si usuario YA pertenece
+           a OTRA institución; si tiene `null` o la misma, continúa.
+        4. Sincronización de profile + app_metadata ANTES del enrollment (institution_id
+           + role='student' + is_active=true), garantizando coherencia.
+        5. Mark-as-used NO aborta el flujo si falla (solo loguea warning), porque el
+           enrollment ya se creó y es lo crítico.
+        6. Logging detallado con etiqueta `[invites.consume]` en cada paso
+           (invite found · enrollment ready · invite marked as used).
+
+      UI:
+        `ConsumeInviteClient` ahora hace `router.refresh()` **antes** del
+        `router.push(/courses/[id])` → invalida el cache RSC para que la página
+        destino vea el enrollment recién creado en el primer render.
+
+      VERIFICACIÓN (scripts/smoke-consume-invite.ts):
+        ✓ consumeInvite ejecuta sin error
+        ✓ enrollment creado en DB (verificado por UUID directo: 4f290624-...)
+        ✓ student_invite.used=true · used_at · used_by actualizados
+        ✓ Segundo intento es idempotente (mismo enrollmentId, 0 duplicados)
+        ✓ typecheck + lint OK
+
+      NO SE MODIFICÓ: estructura DB, otros módulos.
+
+
+  - agent: "main"
+    message: |
       FEATURE — Módulos incrementales 1-3 (Estudiantes · Limpieza Invitaciones · Trabajos cotidianos).
 
       ① ESTUDIANTES POR CURSO

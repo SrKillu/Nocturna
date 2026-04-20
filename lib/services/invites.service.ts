@@ -387,7 +387,7 @@ export async function consumeInvite(
   // ── STUDENT invite ───────────────────────────────────────────────
   const sRes = await admin
     .from('student_invites')
-    .select('id, institution_id, course_id, used, revoked, expires_at')
+    .select('id, institution_id, course_id, used, revoked, expires_at, used_at')
     .eq('token', token)
     .maybeSingle();
 
@@ -399,39 +399,133 @@ export async function consumeInvite(
       used: boolean;
       revoked: boolean;
       expires_at: string;
+      used_at: string | null;
     };
+
+    // eslint-disable-next-line no-console
+    console.log('[invites.consume] student invite found', {
+      inviteId: inv.id,
+      courseId: inv.course_id,
+      institutionId: inv.institution_id,
+      userId: ctx.userId,
+      userInstitution: ctx.institutionId,
+      expiresAt: inv.expires_at,
+      used: inv.used,
+      revoked: inv.revoked,
+    });
+
+    // ── Validaciones obligatorias ────────────────────────────────
     if (inv.revoked) throw new ApiError('FORBIDDEN', 'Invitación revocada');
-    if (inv.used) throw new ApiError('CONFLICT', 'Invitación ya utilizada');
+    if (inv.used || inv.used_at) {
+      throw new ApiError('CONFLICT', 'Invitación ya utilizada');
+    }
     if (new Date(inv.expires_at).getTime() < Date.now()) {
       throw new ApiError('FORBIDDEN', 'Invitación expirada');
     }
-    if (ctx.institutionId !== inv.institution_id) {
+
+    // Solo rechazamos si el usuario YA pertenece a otra institución.
+    // Si institutionId del usuario es null/undefined o coincide, dejamos pasar
+    // (más abajo lo alineamos al tenant del invite).
+    if (ctx.institutionId && ctx.institutionId !== inv.institution_id) {
       throw new ApiError(
         'FORBIDDEN',
         'Esta invitación es para otra institución.'
       );
     }
 
-    // Auto-inscripción usando service client (bypass RLS, ya validamos).
-    const { error: enrErr } = await admin
-      .from('enrollments')
-      .insert({
+    // ── Alinear profile del estudiante al tenant del invite ───────
+    // (idempotente, no cambia nada si ya estaba)
+    const { error: profErr } = await admin
+      .from('profiles')
+      .update({
         institution_id: inv.institution_id,
-        course_id: inv.course_id,
-        student_id: ctx.userId,
-      });
-    if (enrErr && enrErr.code !== '23505') {
-      // 23505 = unique_violation → ya estaba matriculado, tratamos como OK.
-      throw new ApiError('INTERNAL_ERROR', enrErr.message);
+        role: 'student',
+        is_active: true,
+      })
+      .eq('id', ctx.userId);
+    if (profErr) {
+      // eslint-disable-next-line no-console
+      console.error('[invites.consume] profile sync failed', profErr);
+      throw new ApiError('INTERNAL_ERROR', profErr.message);
     }
 
+    // Asegurar app_metadata sincronizado (para el próximo refresh del JWT).
+    await admin.auth.admin
+      .updateUserById(ctx.userId, {
+        app_metadata: {
+          institution_id: inv.institution_id,
+          user_role: 'student',
+        },
+      })
+      .catch((err: unknown) => {
+        // eslint-disable-next-line no-console
+        console.warn('[invites.consume] app_metadata sync skipped', err);
+      });
+
+    // ── UPSERT enrollment ────────────────────────────────────────
+    // onConflict sobre (course_id, student_id) garantiza idempotencia:
+    // si el estudiante ya estaba matriculado devuelve la fila existente.
+    const { data: enrollment, error: enrErr } = await admin
+      .from('enrollments')
+      .upsert(
+        {
+          institution_id: inv.institution_id,
+          course_id: inv.course_id,
+          student_id: ctx.userId,
+        },
+        { onConflict: 'course_id,student_id', ignoreDuplicates: false }
+      )
+      .select('id, course_id, student_id, institution_id, created_at')
+      .single();
+
+    if (enrErr) {
+      // eslint-disable-next-line no-console
+      console.error('[invites.consume] enrollment upsert failed', {
+        code: enrErr.code,
+        message: enrErr.message,
+        details: enrErr.details,
+        hint: enrErr.hint,
+      });
+      throw new ApiError(
+        'INTERNAL_ERROR',
+        `No se pudo crear la inscripción: ${enrErr.message}`
+      );
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('[invites.consume] enrollment ready', {
+      enrollmentId: enrollment?.id,
+      courseId: enrollment?.course_id,
+      studentId: enrollment?.student_id,
+    });
+
+    // ── Marcar invite como usado ─────────────────────────────────
     const { error: usedErr } = await admin
       .from('student_invites')
-      .update({ used: true, used_at: new Date().toISOString(), used_by: ctx.userId })
+      .update({
+        used: true,
+        used_at: new Date().toISOString(),
+        used_by: ctx.userId,
+      })
       .eq('id', inv.id);
-    if (usedErr) throw new ApiError('INTERNAL_ERROR', usedErr.message);
+    if (usedErr) {
+      // No rompemos el flujo: el enrollment ya se creó. Solo logueamos.
+      // eslint-disable-next-line no-console
+      console.error('[invites.consume] invite mark-used failed', {
+        inviteId: inv.id,
+        code: usedErr.code,
+        message: usedErr.message,
+      });
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('[invites.consume] invite marked as used', { inviteId: inv.id });
+    }
 
-    return { kind: 'student', courseId: inv.course_id, institutionId: inv.institution_id };
+    return {
+      kind: 'student',
+      courseId: inv.course_id,
+      institutionId: inv.institution_id,
+    };
   }
 
   throw new ApiError('NOT_FOUND', 'Invitación no encontrada');
