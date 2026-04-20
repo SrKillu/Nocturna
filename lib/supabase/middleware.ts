@@ -79,6 +79,15 @@ const TENANT_OPTIONAL_PAGE_PREFIXES = [
   '/invite',    // consume de invitaciones sin tenant previo
 ];
 
+/**
+ * Endpoints protegidos por auth pero que permiten `institution_id` nulo.
+ * El usuario los usa JUSTAMENTE para unirse a una institución.
+ */
+const TENANT_OPTIONAL_API_PREFIXES = [
+  '/api/invites/consume',
+  '/api/invites/lookup',
+];
+
 function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PAGE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
@@ -242,9 +251,13 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const pathname = request.nextUrl.pathname;
   const protectedApi = isProtectedApi(pathname);
   const protectedPage = isProtectedPage(pathname);
-  const tenantOptional = TENANT_OPTIONAL_PAGE_PREFIXES.some(
+  const tenantOptionalPage = TENANT_OPTIONAL_PAGE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
+  const tenantOptionalApi = TENANT_OPTIONAL_API_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+  const tenantOptional = tenantOptionalPage || tenantOptionalApi;
   const isAdminApi = pathname.startsWith('/api/admin');
 
   // --- Unauthenticated ---------------------------------------------------
@@ -290,15 +303,17 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
   if (!claims.institution_id) {
     logDeny(request, 'missing_tenant_claim', String(claims.is_active ?? 'unknown'));
-    if (protectedApi) return jsonError(403, 'FORBIDDEN', 'Missing institution context');
+    if (protectedApi && !tenantOptional) {
+      return jsonError(403, 'FORBIDDEN', 'Missing institution context');
+    }
     if (protectedPage && !tenantOptional) {
       return redirectToLogin(
         request,
         claims.is_active === false ? 'inactive_account' : 'missing_tenant'
       );
     }
-    // tenantOptional pages (/dashboard, /invites, /invite) siguen su camino:
-    // el layout/página renderizarán el panel de onboarding.
+    // tenantOptional routes (/dashboard, /invites, /invite, /api/invites/consume)
+    // continúan; el handler respectivo decide con `validateSessionLoose`.
     if (!tenantOptional) return innerResponse;
   }
 
@@ -350,9 +365,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     }
     if (!row.institution_id) {
       logDeny(request, 'missing_tenant_db');
-      if (protectedApi) return jsonError(403, 'FORBIDDEN', 'Missing institution context');
+      if (protectedApi && !tenantOptional) {
+        return jsonError(403, 'FORBIDDEN', 'Missing institution context');
+      }
       if (!tenantOptional) return redirectToLogin(request, 'missing_tenant');
-      // tenantOptional: deja pasar, la UI muestra onboarding.
+      // tenantOptional: deja pasar, la UI/endpoint maneja el caso sin tenant.
     }
     // Session invalidation: JWT claim must match DB counter.
     const jwtVersion = Number.isFinite(claims.session_version) ? Number(claims.session_version) : -1;

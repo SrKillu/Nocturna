@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2, Moon, Ticket } from 'lucide-react';
+import { apiFetch } from '@/lib/api/client';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,11 +33,9 @@ export default function PendingPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/invites/consume', {
+      const res = await apiFetch('/api/invites/consume', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ token: t }),
-        credentials: 'include',
       });
       const json = (await res.json().catch(() => ({}))) as {
         data?: { kind: 'teacher' | 'student'; courseId: string | null };

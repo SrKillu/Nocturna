@@ -250,6 +250,56 @@ agent_communication:
   - agent: "main"
   - agent: "main"
     message: |
+      FEATURE — Onboarding funcional (código manual + modal QR).
+
+      ① PANEL MANUAL (dashboard)
+        * Input con validación visual en tiempo real (UUID format check).
+        * Botón "Unirme" disabled hasta que el formato sea válido.
+        * Loading state con Loader2 + label "Validando…".
+        * Mapeo de errores user-friendly: "Código inválido o inexistente",
+          "Invitación revocada", "Invitación expirada", "Invitación ya usada",
+          "Esa invitación es para otra institución".
+
+      ② MODAL "¿Tenés un QR?"
+        * Nueva card clickeable (antes era solo texto) que abre un Dialog.
+        * Input acepta tanto el enlace completo (/invite/<uuid>) como el UUID
+          puro. Extractor `normalizeQrInput` regex para pescar el UUID automático.
+        * Indicador visual verde "Código válido" cuando matchea.
+        * Botón Aceptar deshabilitado hasta validez; loading state durante consume.
+
+      ③ CSRF COHESIÓN
+        * Las 3 llamadas a /api/invites/consume en el frontend (panel,
+          /auth/pending, register fallback) migraron de `fetch` directo →
+          `apiFetch` de `@/lib/api/client` → incluye header `x-csrf-token`
+          automáticamente desde la cookie CSRF.
+
+      ④ TENANT-OPTIONAL API
+        * Middleware: nueva lista `TENANT_OPTIONAL_API_PREFIXES = ['/api/invites/consume',
+          '/api/invites/lookup']` → user sin tenant puede POST /api/invites/consume.
+        * Los 2 checkpoints de tenant (JWT claim + DB gate) respetan la lista.
+
+      ⑤ JWT REFRESH ROBUSTO
+        * Después del consume, polling 10×200ms hasta que `getSession()` devuelva
+          access_token con `institution_id` populado en app_metadata. Evita race
+          donde el redirect llega a /courses/[id] antes de que el JWT nuevo esté
+          propagado en la cookie del browser.
+
+      VERIFICACIÓN (browser + smoke): ✅ typecheck ✅ CSRF funcional en consume
+      ✅ Modal QR funciona con extracción automática ✅ Errors user-friendly
+
+      BUG PRE-EXISTENTE DETECTADO (orthogonal, documentado): tras el consume el
+      user llega a /courses/[id] y ve "No encontramos lo que buscabas" porque la
+      RLS `courses_select_tenant` usa la función `auth.institution_id()` que NO
+      funciona correctamente en la DB del usuario (ya reportado por el fork anterior).
+      Todos los students del sistema están afectados, no solo los nuevos. Ver SQL
+      de fix (redefinición de la función helper sin tocar tablas) en el mensaje del
+      chat.
+
+      NO MODIFICÓ: DB, invites.service.ts, enrollments, auth.service.ts.
+
+
+  - agent: "main"
+    message: |
       FEATURE — Acceso relajado para usuarios sin institución.
 
       OBJETIVO: usuarios autenticados sin institution_id pueden entrar al

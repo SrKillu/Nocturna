@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2, Moon, Ticket, UserRound, GraduationCap } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -143,10 +144,8 @@ function RegisterPageInner() {
           // eslint-disable-next-line no-console
           console.log('[register] token not consumed by backend, calling consume fallback');
           try {
-            const cr = await fetch('/api/invites/consume', {
+            const cr = await apiFetch('/api/invites/consume', {
               method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              credentials: 'include',
               body: JSON.stringify({ token: effectiveToken }),
             });
             const cj = (await cr.json().catch(() => ({}))) as {
