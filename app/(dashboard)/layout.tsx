@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation';
-import { requireAuth } from '@/lib/api/auth';
+import {
+  validateSessionLoose,
+  SessionValidationError,
+} from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/layout/app-shell';
 import { AuthAuditLogger } from '@/components/auth/auth-audit-logger';
@@ -14,19 +17,15 @@ export const revalidate = 0;
 export const fetchCache = 'default-no-store';
 
 /**
- * Shell layout for every authenticated page.
+ * Shell layout para cualquier página autenticada.
  *
- * Route group `(dashboard)` → no URL segment is injected, so this wraps:
- *   /dashboard, /courses, /tasks, /submissions, /grades, /admin
- *
- * Auth contract:
- *   * `requireAuth()` runs validateSession() with the same rules as the
- *     middleware (profile exists, active, session_version match, role match).
- *   * Any failure redirects to /login preserving the `next` param.
- *
- * The visible navigation items are flat and identical for every role. The
- * “Admin” entry is rendered conditionally on the client (role prop), and the
- * /admin page itself re-checks the role server-side before rendering.
+ *   * Usamos `validateSessionLoose()` a propósito para permitir entrar al
+ *     dashboard incluso sin `institution_id`. Esto cubre el flujo de registro
+ *     público donde el usuario aún no aceptó ninguna invitación.
+ *   * Las páginas que requieren tenant (cursos, tareas, materiales, etc.) siguen
+ *     llamando a `requireAuth()` y van a redirigir a /login si corresponde.
+ *   * El dashboard detecta `institutionId === null` y renderiza el panel de
+ *     onboarding en lugar del contenido normal.
  */
 export default async function DashboardGroupLayout({
   children,
@@ -35,38 +34,32 @@ export default async function DashboardGroupLayout({
 }) {
   let ctx;
   try {
-    ctx = await requireAuth();
+    ctx = await validateSessionLoose();
   } catch (err) {
-    // Caso especial: usuario autenticado pero SIN institución (registro público
-    // sin token). Lo enviamos al onboarding para que pegue su código.
-    if (
-      err &&
-      typeof err === 'object' &&
-      'code' in err &&
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ((err as any).code === 'FORBIDDEN' &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typeof (err as any).message === 'string' &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (err as any).message.toLowerCase().includes('institution'))
-    ) {
-      redirect('/auth/pending');
+    // Solo redirigimos si realmente NO hay sesión.
+    if (err instanceof SessionValidationError && err.code !== 'not_authenticated') {
+      // profile inválido / inactivo: volvemos al login.
+      redirect('/login?error=' + err.code);
     }
     redirect('/login?next=/dashboard');
   }
 
   const supabase = createClient();
-  const { data: institution } = await supabase
-    .from('institutions')
-    .select('name')
-    .eq('id', ctx.institutionId)
-    .maybeSingle();
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', ctx.userId)
-    .maybeSingle();
+  const [{ data: institution }, { data: profile }] = await Promise.all([
+    ctx.institutionId
+      ? supabase
+          .from('institutions')
+          .select('name')
+          .eq('id', ctx.institutionId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', ctx.userId)
+      .maybeSingle(),
+  ]);
 
   return (
     <>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireAuth } from '@/lib/api/auth';
+import { validateSessionLoose } from '@/lib/auth/session';
 import {
   getDashboardOverview,
   emptyOverview,
@@ -12,6 +12,7 @@ import { KpiGrid } from '@/components/dashboard/kpi-grid';
 import { CoursesCard } from '@/components/dashboard/courses-card';
 import { TasksCard } from '@/components/dashboard/tasks-card';
 import { ActivityCard } from '@/components/dashboard/activity-card';
+import { JoinInstitutionPanel } from '@/components/dashboard/join-institution-panel';
 
 export const metadata: Metadata = {
   title: 'Panel · Nocturna',
@@ -21,7 +22,12 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardHome() {
-  const ctx = await requireAuth();
+  const ctx = await validateSessionLoose();
+
+  // ── Usuario sin tenant → onboarding inline ───────────────────────
+  if (!ctx.institutionId) {
+    return <JoinInstitutionPanel role={ctx.role} />;
+  }
 
   let overview: DashboardOverview;
   try {

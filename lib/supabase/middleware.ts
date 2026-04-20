@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { UserRole } from '@/lib/types/database';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -11,6 +12,25 @@ import {
 } from '@/lib/security/csrf';
 import { sanitizeNextParam } from '@/lib/security/next-param';
 import { readCurrentJwtClaims } from '@/lib/auth/jwt-claims';
+
+/**
+ * Lazy service-role client. Se instancia ÚNICAMENTE para el lookup del profile
+ * propio del usuario autenticado (RLS-bypass necesario cuando `institution_id`
+ * es null y el user aún no matchea `profiles_select_tenant`). Se devuelve null
+ * si la SUPABASE_SERVICE_ROLE_KEY no está disponible — en ese caso caemos al
+ * supabase-with-user-cookie normal.
+ */
+let _serviceRoleSingleton: SupabaseClient | null = null;
+function createServiceRoleClient(): SupabaseClient | null {
+  if (_serviceRoleSingleton) return _serviceRoleSingleton;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  _serviceRoleSingleton = createSupabaseClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return _serviceRoleSingleton;
+}
 
 const PUBLIC_API_PREFIXES = [
   '/api/health',
@@ -45,6 +65,18 @@ const PROTECTED_PAGE_PREFIXES = [
   '/chat',
   '/invites',
   '/invite',
+];
+
+/**
+ * Páginas protegidas donde NO es obligatorio tener `institution_id` asignado.
+ * Un usuario autenticado recién registrado puede entrar, pero dentro de la
+ * página se muestra el panel de onboarding para pegar su código de invitación.
+ * Todas las demás rutas protegidas siguen exigiendo tenant.
+ */
+const TENANT_OPTIONAL_PAGE_PREFIXES = [
+  '/dashboard',
+  '/invites',   // UI del sistema de QR (solo admin/teacher lo ven igual)
+  '/invite',    // consume de invitaciones sin tenant previo
 ];
 
 function isProtectedPage(pathname: string): boolean {
@@ -210,6 +242,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const pathname = request.nextUrl.pathname;
   const protectedApi = isProtectedApi(pathname);
   const protectedPage = isProtectedPage(pathname);
+  const tenantOptional = TENANT_OPTIONAL_PAGE_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
   const isAdminApi = pathname.startsWith('/api/admin');
 
   // --- Unauthenticated ---------------------------------------------------
@@ -256,23 +291,33 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   if (!claims.institution_id) {
     logDeny(request, 'missing_tenant_claim', String(claims.is_active ?? 'unknown'));
     if (protectedApi) return jsonError(403, 'FORBIDDEN', 'Missing institution context');
-    if (protectedPage) {
+    if (protectedPage && !tenantOptional) {
       return redirectToLogin(
         request,
         claims.is_active === false ? 'inactive_account' : 'missing_tenant'
       );
     }
-    return innerResponse;
+    // tenantOptional pages (/dashboard, /invites, /invite) siguen su camino:
+    // el layout/página renderizarán el panel de onboarding.
+    if (!tenantOptional) return innerResponse;
   }
 
   // DB gate (second, authoritative layer). Runs ONLY for protected routes so
   // we keep static asset traffic cheap.
   if (protectedApi || protectedPage) {
     const authenticatedUser = user as { id: string; app_metadata?: Record<string, unknown> };
+
+    // Lectura del profile con service client para el caso tenant-less: un user
+    // recién registrado aún no pasa el `profiles_select_tenant` (RLS exige
+    // institution_id match). Sólo usamos el service client para su propio
+    // profile; la autenticación ya se verificó vía `supabase.auth.getUser()`.
+    const serviceClient = createServiceRoleClient();
+    const lookupClient = serviceClient ?? supabase;
+
     const {
       data: profile,
       error: profileErr,
-    } = await supabase
+    } = await lookupClient
       .from('profiles')
       .select('role, institution_id, is_active, session_version')
       .eq('id', authenticatedUser.id)
@@ -306,7 +351,8 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     if (!row.institution_id) {
       logDeny(request, 'missing_tenant_db');
       if (protectedApi) return jsonError(403, 'FORBIDDEN', 'Missing institution context');
-      return redirectToLogin(request, 'missing_tenant');
+      if (!tenantOptional) return redirectToLogin(request, 'missing_tenant');
+      // tenantOptional: deja pasar, la UI muestra onboarding.
     }
     // Session invalidation: JWT claim must match DB counter.
     const jwtVersion = Number.isFinite(claims.session_version) ? Number(claims.session_version) : -1;

@@ -250,6 +250,55 @@ agent_communication:
   - agent: "main"
   - agent: "main"
     message: |
+      FEATURE — Acceso relajado para usuarios sin institución.
+
+      OBJETIVO: usuarios autenticados sin institution_id pueden entrar al
+      dashboard (antes iban a /auth/pending), con panel inline para unirse.
+
+      ① MIDDLEWARE (lib/supabase/middleware.ts)
+        * Nuevo `TENANT_OPTIONAL_PAGE_PREFIXES = ['/dashboard','/invites','/invite']`.
+        * 2 checkpoints de tenant (JWT claim + DB gate) ahora respetan esta lista:
+          si la ruta es tenant-optional, se deja pasar. Otras rutas protegidas
+          (cursos, tareas, materiales, etc.) siguen exigiendo tenant.
+        * **Fix crítico de RLS**: el middleware y `validateSessionLoose()` ahora
+          leen el profile del usuario propio con `createServiceRoleClient()` lazy
+          (solo el profile del user autenticado). Motivo: la policy
+          `profiles_select_tenant` exige institution_id match, por lo que un
+          user sin tenant no puede leer su propio profile → "no_profile". Sin
+          tocar DB, bypass controlado solo para su propio id.
+
+      ② LAYOUT Y PÁGINAS
+        * app/(dashboard)/layout.tsx: usa validateSessionLoose (antes requireAuth).
+          Redirige a /login solo si NO hay sesión. Si error es invalid_profile
+          lleva a /login?error=... (caso edge). Ya no manda a /auth/pending.
+        * app/(dashboard)/dashboard/page.tsx: detecta ctx.institutionId ausente
+          y renderiza <JoinInstitutionPanel role={ctx.role} />.
+
+      ③ UI
+        * components/dashboard/join-institution-panel.tsx (NUEVO): panel
+          "¡Bienvenido a Nocturna!" con input de código UUID + botón Unirme +
+          2 cards explicativas (QR · rol). Reutiliza el mismo POST /api/invites/consume
+          que ya funciona desde /auth/pending. Tras consumir hace refreshSession +
+          hard-nav a /courses/[id] (student) o /dashboard (teacher).
+
+      ④ PROTECCIONES MANTENIDAS
+        * /api/* con tenant requirement siguen devolviendo 403 para user sin
+          institution (flujo seguro: ningún dato cross-tenant se expone).
+        * Rutas /courses, /tasks, /submissions, /grades, /admin, /teachers,
+          /materials, /chat siguen con guardias estrictas.
+
+      VERIFICACIÓN (screenshot manual):
+        ✓ Registro libre → redirect a /dashboard (antes: /auth/pending).
+        ✓ Sidebar visible con 8 items.
+        ✓ Panel onboarding visible con título "¡Bienvenido a Nocturna!".
+        ✓ "Rol: Estudiante" · "INSTITUCIÓN —".
+        ✓ typecheck + lint OK.
+
+      NO MODIFICÓ: DB, lógica de invites, RLS policies.
+
+
+  - agent: "main"
+    message: |
       BUGFIX — Registro con invitación + error CSRF `missing_token`.
 
       ① CSRF FIX

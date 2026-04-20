@@ -1,5 +1,6 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { ApiError } from '@/lib/errors';
 import type { AuthenticatedContext } from '@/lib/types/auth';
 import type { UserRole } from '@/lib/types/database';
@@ -111,8 +112,14 @@ export async function validateSession(): Promise<AuthenticatedContext> {
  * Variante "loose" de validateSession: **NO** exige `institution_id` ni `is_active`.
  *
  * Pensada exclusivamente para endpoints del onboarding (consumir invitaciones,
- * pegar código de inscripción desde /auth/pending). Nunca usar en rutas del
- * dashboard — el `ctx.institutionId` puede ser null y RLS no va a filtrar.
+ * pegar código de inscripción desde /auth/pending) y el /dashboard, que permite
+ * entrar sin tenant y pide al usuario pegar su código de invitación in-place.
+ *
+ * Importante: usamos el `service client` ÚNICAMENTE para leer el profile propio
+ * del usuario autenticado. Esto es necesario porque la RLS `profiles_select_tenant`
+ * exige `institution_id = auth.institution_id()`, lo que impide al propio usuario
+ * leer su perfil si aún no tiene institución. La auth sigue siendo la del user
+ * (validada vía `getUser()` antes). Nunca exponer este client al cliente.
  */
 export async function validateSessionLoose(): Promise<AuthenticatedContext> {
   const supabase = createClient();
@@ -124,7 +131,10 @@ export async function validateSessionLoose(): Promise<AuthenticatedContext> {
     throw new SessionValidationError('not_authenticated');
   }
 
-  const { data: profile, error: profileErr } = (await supabase
+  // Lectura autoritativa del profile. Sin service client podemos toparnos con
+  // un user recién registrado sin tenant cuyo profile es invisible por RLS.
+  const admin = createServiceClient();
+  const { data: profile, error: profileErr } = (await admin
     .from('profiles')
     .select('id, email, full_name, role, institution_id, is_active, session_version')
     .eq('id', user.id)
