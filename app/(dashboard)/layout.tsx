@@ -36,7 +36,22 @@ export default async function DashboardGroupLayout({
   let ctx;
   try {
     ctx = await requireAuth();
-  } catch {
+  } catch (err) {
+    // Caso especial: usuario autenticado pero SIN institución (registro público
+    // sin token). Lo enviamos al onboarding para que pegue su código.
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((err as any).code === 'FORBIDDEN' &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typeof (err as any).message === 'string' &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (err as any).message.toLowerCase().includes('institution'))
+    ) {
+      redirect('/auth/pending');
+    }
     redirect('/login?next=/dashboard');
   }
 

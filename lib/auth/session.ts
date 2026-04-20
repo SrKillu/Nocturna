@@ -108,6 +108,42 @@ export async function validateSession(): Promise<AuthenticatedContext> {
 }
 
 /**
+ * Variante "loose" de validateSession: **NO** exige `institution_id` ni `is_active`.
+ *
+ * Pensada exclusivamente para endpoints del onboarding (consumir invitaciones,
+ * pegar código de inscripción desde /auth/pending). Nunca usar en rutas del
+ * dashboard — el `ctx.institutionId` puede ser null y RLS no va a filtrar.
+ */
+export async function validateSessionLoose(): Promise<AuthenticatedContext> {
+  const supabase = createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) {
+    throw new SessionValidationError('not_authenticated');
+  }
+
+  const { data: profile, error: profileErr } = (await supabase
+    .from('profiles')
+    .select('id, email, full_name, role, institution_id, is_active, session_version')
+    .eq('id', user.id)
+    .maybeSingle()) as { data: ProfileRow | null; error: unknown };
+  if (profileErr || !profile) {
+    throw new SessionValidationError('invalid_profile');
+  }
+
+  return {
+    user,
+    userId: profile.id,
+    role: profile.role,
+    institutionId: profile.institution_id ?? '',
+    email: profile.email,
+  };
+}
+
+
+/**
  * Adapts SessionValidationError to the standard ApiError shape used by route handlers.
  */
 export function sessionErrorToApiError(err: SessionValidationError): ApiError {

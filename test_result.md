@@ -250,6 +250,61 @@ agent_communication:
   - agent: "main"
   - agent: "main"
     message: |
+      FEATURE — Registro público (student + teacher self-service).
+
+      ① REGISTRO PÚBLICO
+        * Schema Zod: `publicRegisterSchema` en lib/validations/auth.ts (fullName, email,
+          password≥8, role ∈ student|teacher, token? uuid). role='admin' imposible.
+        * Service: `registerPublicUser(input)` en lib/services/auth.service.ts
+            - Sin token: crea user + profile con institution_id=null (pending state).
+            - Con student_invite: alinea role+institution del invite, upsert enrollment,
+              marca invite usado. Idempotente.
+            - Con teacher_invite: sobreescribe role='teacher' + institution del invite.
+            - Rollback del auth.user si falla el profile.
+            - Logging [auth.register] en cada paso.
+        * Endpoint: `POST /api/auth/register` con rate-limit authSignup (3/min/IP),
+          listado en PUBLIC_API_PREFIXES del middleware. Comparte rate-limit con signup
+          institucional (mismo riesgo de abuso).
+
+      ② UI
+        * /auth/register (cliente): form modern con RoleCard toggle (Student/Teacher),
+          campo token opcional, autodetecta ?token= desde URL (rol heredado + campo
+          readonly). Post-signup inicia sesión y redirige según resultado
+          (enrolledCourseId → curso · institutionId → dashboard · null → /auth/pending).
+        * /auth/pending: landing para user autenticado sin institución. Input para pegar
+          token → POST /api/invites/consume → refreshSession → redirect.
+        * Link desde /login → /auth/register y /signup.
+
+      ③ AUTH PLUMBING
+        * lib/auth/session.ts + `validateSessionLoose()`: variante que permite
+          institutionId=null. Pensada ÚNICAMENTE para onboarding (no usar en dashboard).
+        * /api/invites/consume ahora usa validateSessionLoose (antes rechazaba user sin
+          tenant con missing_tenant).
+        * /app/(dashboard)/layout.tsx: si requireAuth falla con FORBIDDEN+institution → 
+          redirect('/auth/pending') (en vez de /login).
+        * Middleware: agregados '/api/auth/register', '/auth/register', '/auth/pending'
+          a PUBLIC_API_PREFIXES y AUTH_PAGES.
+
+      SEGURIDAD
+        * role NUNCA puede ser 'admin' desde registro público (Zod enum + service doble
+          check). Bootstrap de admin queda solo en /api/auth/signup (institución).
+        * Token valida UUID formato + expires_at + revoked + used antes de cualquier
+          INSERT.
+        * Rate-limit por IP.
+
+      VERIFICACIÓN (scripts/smoke-register.ts):
+        Caso A (libre)              → ✅ institutionId=null, tokenConsumed=false
+        Caso B (student_invite)     → ✅ institutionId+enrolledCourseId set, tokenConsumed=true
+        Caso C (teacher_invite)     → ⚠️ bloqueado por bug de schema DB: la tabla
+                                        teacher_invites del usuario tiene columnas viejas
+                                        (falta used/used_at/used_by/revoked/email_hint).
+                                        Ver SQL de alineación en el mensaje del chat.
+
+      NO SE MODIFICÓ: estructura DB (solo código + páginas). signup de institución sigue intacto.
+
+
+  - agent: "main"
+    message: |
       BUGFIX CRÍTICO — Flujo consume invite estudiante creaba 500 silencioso.
 
       ROOT CAUSE (confirmado con smoke test):

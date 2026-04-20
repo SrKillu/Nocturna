@@ -139,9 +139,15 @@ export function LoginForm({ nextPath }: LoginFormProps) {
             )}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            ¿Aún no tienes institución?{' '}
+            ¿No tenés cuenta?{' '}
+            <Link href="/auth/register" className="font-medium text-primary hover:underline">
+              Crear cuenta
+            </Link>
+          </p>
+          <p className="text-center text-xs text-muted-foreground">
+            ¿Querés registrar una institución nueva?{' '}
             <Link href="/signup" className="font-medium text-primary hover:underline">
-              Crear una
+              Crear institución
             </Link>
           </p>
         </CardFooter>

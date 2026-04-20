@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/api/auth';
+import { validateSessionLoose, SessionValidationError, sessionErrorToApiError } from '@/lib/auth/session';
 import { consumeInvite } from '@/lib/services/invites.service';
 import { toApiErrorResponse } from '@/lib/errors';
 
@@ -12,7 +12,15 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ctx = await requireAuth();
+    // Usamos validateSessionLoose: un usuario recién registrado sin institución
+    // debe poder consumir una invitación para unirse a su tenant.
+    let ctx;
+    try {
+      ctx = await validateSessionLoose();
+    } catch (err) {
+      if (err instanceof SessionValidationError) throw sessionErrorToApiError(err);
+      throw err;
+    }
     const body = await request.json().catch(() => ({}));
     const { token } = bodySchema.parse(body);
     const result = await consumeInvite(ctx, token);

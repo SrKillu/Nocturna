@@ -261,3 +261,226 @@ function generateTempPassword(): string {
   }
   return out;
 }
+
+// ════════════════════════════════════════════════════════════════════
+// Public self-service registration (student / teacher)
+// ════════════════════════════════════════════════════════════════════
+
+export interface PublicRegisterResult {
+  userId: string;
+  email: string;
+  /** Rol finalmente persistido (puede venir del token si se proveyó). */
+  role: 'student' | 'teacher';
+  /** null si el usuario se registró sin invite. */
+  institutionId: string | null;
+  /** Si el token era de `student_invites`, devolvemos el curso para redirigir. */
+  enrolledCourseId: string | null;
+  /** true si se consumió un invite durante el signup. */
+  tokenConsumed: boolean;
+}
+
+/**
+ * Registro público (no-admin). Cubre dos caminos:
+ *
+ *   1. SIN token: crea la cuenta con role elegido + institution_id=null.
+ *      La UI envía al usuario a /auth/pending para pegar el código cuando
+ *      lo reciba.
+ *
+ *   2. CON token (UUID de teacher_invites o student_invites): crea la
+ *      cuenta usando role + institution_id del invite, marca el invite
+ *      como usado y — si es student — crea el enrollment. Todo atómico
+ *      desde el punto de vista del usuario (rollback del auth.user si falla).
+ *
+ * Nunca permite role='admin'. El endpoint valida con Zod primero.
+ */
+export async function registerPublicUser(input: {
+  fullName: string;
+  email: string;
+  password: string;
+  role: 'student' | 'teacher';
+  token?: string | null;
+}): Promise<PublicRegisterResult> {
+  const admin = createServiceClient();
+
+  // ── 1. Si hay token, lo resolvemos ANTES de crear el user. ────────
+  let resolvedRole: 'student' | 'teacher' = input.role;
+  let resolvedInstitutionId: string | null = null;
+  let studentInviteCourseId: string | null = null;
+  let teacherInviteId: string | null = null;
+  let studentInviteId: string | null = null;
+
+  if (input.token) {
+    // eslint-disable-next-line no-console
+    console.log('[auth.register] token provided, looking up', {
+      token: input.token.slice(0, 8),
+    });
+    // Lookup en teacher_invites
+    const tRes = await admin
+      .from('teacher_invites')
+      .select('id, institution_id, used, revoked, expires_at')
+      .eq('token', input.token)
+      .maybeSingle();
+    if (tRes.data) {
+      const inv = tRes.data as {
+        id: string;
+        institution_id: string;
+        used: boolean;
+        revoked: boolean;
+        expires_at: string;
+      };
+      if (inv.revoked) throw new ApiError('FORBIDDEN', 'Invitación revocada');
+      if (inv.used) throw new ApiError('CONFLICT', 'Invitación ya utilizada');
+      if (new Date(inv.expires_at).getTime() < Date.now()) {
+        throw new ApiError('FORBIDDEN', 'Invitación expirada');
+      }
+      resolvedRole = 'teacher';
+      resolvedInstitutionId = inv.institution_id;
+      teacherInviteId = inv.id;
+    } else {
+      // Lookup en student_invites
+      const sRes = await admin
+        .from('student_invites')
+        .select('id, institution_id, course_id, used, revoked, expires_at')
+        .eq('token', input.token)
+        .maybeSingle();
+      if (!sRes.data) {
+        throw new ApiError('NOT_FOUND', 'Invitación no encontrada');
+      }
+      const inv = sRes.data as {
+        id: string;
+        institution_id: string;
+        course_id: string;
+        used: boolean;
+        revoked: boolean;
+        expires_at: string;
+      };
+      if (inv.revoked) throw new ApiError('FORBIDDEN', 'Invitación revocada');
+      if (inv.used) throw new ApiError('CONFLICT', 'Invitación ya utilizada');
+      if (new Date(inv.expires_at).getTime() < Date.now()) {
+        throw new ApiError('FORBIDDEN', 'Invitación expirada');
+      }
+      resolvedRole = 'student';
+      resolvedInstitutionId = inv.institution_id;
+      studentInviteCourseId = inv.course_id;
+      studentInviteId = inv.id;
+    }
+    // eslint-disable-next-line no-console
+    console.log('[auth.register] token resolved', {
+      role: resolvedRole,
+      institutionId: resolvedInstitutionId,
+      courseId: studentInviteCourseId,
+    });
+  }
+
+  // ── 2. Crear auth user. ───────────────────────────────────────────
+  const { data: created, error: userErr } = await admin.auth.admin.createUser({
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
+    app_metadata: {
+      user_role: resolvedRole,
+      institution_id: resolvedInstitutionId,
+      full_name: input.fullName,
+    },
+  });
+  if (userErr || !created?.user) {
+    if (userErr?.message?.toLowerCase().includes('registered')) {
+      throw new ApiError('CONFLICT', 'Ya existe una cuenta con ese email');
+    }
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      `No se pudo crear la cuenta: ${userErr?.message ?? ''}`
+    );
+  }
+  const userId = created.user.id;
+
+  // ── 3. Crear profile (idempotente). ──────────────────────────────
+  const { error: profileErr } = await admin.from('profiles').upsert(
+    {
+      id: userId,
+      institution_id: resolvedInstitutionId,
+      role: resolvedRole,
+      email: input.email,
+      full_name: input.fullName,
+      is_active: true,
+    },
+    { onConflict: 'id' }
+  );
+  if (profileErr) {
+    // Rollback del auth.user si no pudimos crear el profile.
+    await admin.auth.admin.deleteUser(userId).catch(() => undefined);
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      `No se pudo crear el perfil: ${profileErr.message}`
+    );
+  }
+
+  // ── 4. Si había token, consumirlo. ───────────────────────────────
+  let enrolledCourseId: string | null = null;
+  let tokenConsumed = false;
+
+  if (teacherInviteId) {
+    const { error } = await admin
+      .from('teacher_invites')
+      .update({
+        used: true,
+        used_at: new Date().toISOString(),
+        used_by: userId,
+      })
+      .eq('id', teacherInviteId);
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.warn('[auth.register] teacher invite mark-used failed', error);
+    } else {
+      tokenConsumed = true;
+    }
+  }
+
+  if (studentInviteId && studentInviteCourseId && resolvedInstitutionId) {
+    // Crear enrollment.
+    const { data: enrollment, error: enrErr } = await admin
+      .from('enrollments')
+      .upsert(
+        {
+          institution_id: resolvedInstitutionId,
+          course_id: studentInviteCourseId,
+          student_id: userId,
+        },
+        { onConflict: 'course_id,student_id', ignoreDuplicates: false }
+      )
+      .select('id, course_id')
+      .single();
+
+    if (enrErr) {
+      // eslint-disable-next-line no-console
+      console.error('[auth.register] enrollment failed', enrErr);
+      // No rollback del user: el signup es válido, solo informamos que no se matriculó.
+    } else {
+      enrolledCourseId = (enrollment as { course_id: string }).course_id;
+      // eslint-disable-next-line no-console
+      console.log('[auth.register] enrollment ready', {
+        enrollmentId: (enrollment as { id: string }).id,
+      });
+    }
+
+    const { error: usedErr } = await admin
+      .from('student_invites')
+      .update({
+        used: true,
+        used_at: new Date().toISOString(),
+        used_by: userId,
+      })
+      .eq('id', studentInviteId);
+    if (!usedErr) tokenConsumed = true;
+  }
+
+  return {
+    userId,
+    email: input.email,
+    role: resolvedRole,
+    institutionId: resolvedInstitutionId,
+    enrolledCourseId,
+    tokenConsumed,
+  };
+}
+

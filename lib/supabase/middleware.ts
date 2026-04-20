@@ -12,8 +12,18 @@ import {
 import { sanitizeNextParam } from '@/lib/security/next-param';
 import { readCurrentJwtClaims } from '@/lib/auth/jwt-claims';
 
-const PUBLIC_API_PREFIXES = ['/api/health', '/api/auth/signup', '/api/auth/logout'];
-const AUTH_PAGES = new Set(['/login', '/signup']);
+const PUBLIC_API_PREFIXES = [
+  '/api/health',
+  '/api/auth/signup',
+  '/api/auth/register',
+  '/api/auth/logout',
+];
+const AUTH_PAGES = new Set([
+  '/login',
+  '/signup',
+  '/auth/register',
+  '/auth/pending',
+]);
 
 function isPublicApi(pathname: string): boolean {
   return PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
