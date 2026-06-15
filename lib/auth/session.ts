@@ -171,3 +171,5 @@ export function sessionErrorToApiError(err: SessionValidationError): ApiError {
       return new ApiError('FORBIDDEN', 'Invalid profile');
   }
 }
+
+export { validateSessionV2 } from './active-membership';

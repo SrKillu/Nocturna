@@ -5,7 +5,8 @@ import {
   sessionErrorToApiError,
   SessionValidationError,
 } from '@/lib/auth/session';
-import type { AuthenticatedContext } from '@/lib/types/auth';
+import { hasCapability, legacyRoleToRoleKey } from '@/lib/rbac/capabilities';
+import type { AuthenticatedContext, CapabilityKey } from '@/lib/types/auth';
 import type { UserRole } from '@/lib/types/database';
 
 /**
@@ -30,6 +31,16 @@ export function requireRole(
 ): void {
   if (!allowed.includes(ctx.role)) {
     throw new ApiError('FORBIDDEN', `Role "${ctx.role}" not allowed`);
+  }
+}
+
+export function requireCapability(
+  ctx: AuthenticatedContext,
+  capability: CapabilityKey
+): void {
+  const roleKey = legacyRoleToRoleKey(ctx.role);
+  if (!hasCapability(roleKey, capability)) {
+    throw new ApiError('FORBIDDEN', `Capability "${capability}" not allowed`);
   }
 }
 

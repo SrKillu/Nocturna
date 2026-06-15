@@ -1,7 +1,15 @@
-// Auto-maintained Supabase DB types for the Nocturna schema.
+// Auto-maintained Supabase DB types for the current Nocturna V1 schema.
 // Keep in sync with /app/supabase/migrations.
+//
+// Batch A note:
+// V2 database types must be generated from the approved clean Supabase V2
+// project/schema before replacing this file. Until then, keep V1 types here so
+// existing services continue to compile while V2 application DTOs live in
+// lib/types/auth.ts and future module-specific type files.
 
 export type UserRole = 'student' | 'teacher' | 'admin' | 'super_admin';
+
+export type LegacyUserRole = UserRole;
 
 export type SubmissionStatus = 'submitted' | 'graded' | 'late' | 'returned';
 
