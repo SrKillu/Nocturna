@@ -88,6 +88,11 @@ const TENANT_OPTIONAL_API_PREFIXES = [
   '/api/invites/lookup',
 ];
 
+const AUTH_V2_HANDLER_VALIDATED_API_PATHS = new Set([
+  '/api/auth/me-v2',
+  '/api/memberships/active',
+]);
+
 function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PAGE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
@@ -259,6 +264,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   );
   const tenantOptional = tenantOptionalPage || tenantOptionalApi;
   const isAdminApi = pathname.startsWith('/api/admin');
+  const isAuthV2HandlerValidatedApi = AUTH_V2_HANDLER_VALIDATED_API_PATHS.has(pathname);
 
   // --- Unauthenticated ---------------------------------------------------
   if (!user) {
@@ -292,6 +298,15 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
+  }
+
+  // Auth V2 routes are not public: the user has already been authenticated via
+  // Supabase above, CSRF has already run for mutating requests, and the route
+  // handlers perform the V2 DB/membership authorization checks. Do not require
+  // legacy JWT claims here, because V2 users are resolved from profiles +
+  // institution_memberships instead of app_metadata.user_role.
+  if (isAuthV2HandlerValidatedApi) {
+    return innerResponse;
   }
 
   // JWT-claim gate (first layer). Missing claims == missing profile or inactive.
