@@ -293,10 +293,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     session_version?: number;
   } = rawClaims;
 
-  // Already logged in but hitting auth pages -> send to dashboard.
+  // Already logged in but hitting auth pages -> send to the matching runtime.
+  // Legacy V1 users carry user_role claims and can continue to /dashboard.
+  // V2 staging users are resolved by the route handler from DB memberships, so
+  // keep them away from the legacy dashboard/profile gate.
   if (AUTH_PAGES.has(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
+    url.pathname = claims.user_role ? '/dashboard' : '/auth/v2-session';
+    url.search = '';
     return NextResponse.redirect(url);
   }
 
@@ -313,7 +317,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   if (!claims.user_role) {
     logDeny(request, 'missing_role_claim');
     if (protectedApi) return jsonError(403, 'FORBIDDEN', 'Invalid profile');
-    if (protectedPage) return redirectToLogin(request, 'invalid_profile');
+    if (protectedPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth/v2-session';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
     return innerResponse;
   }
   if (!claims.institution_id) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Loader2, LogOut, Moon, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,6 +35,15 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
       membership.status === 'active' &&
       (membership.institutionStatus === 'active' || membership.institutionStatus === 'trial')
   );
+
+  useEffect(() => {
+    if (!session.activeMembership?.membershipId) return;
+
+    void apiFetch('/api/memberships/active', {
+      method: 'POST',
+      body: JSON.stringify({ membershipId: session.activeMembership.membershipId }),
+    }).catch(() => undefined);
+  }, [session.activeMembership?.membershipId]);
 
   async function activateMembership(membershipId: string): Promise<void> {
     const res = await apiFetch('/api/memberships/active', {
