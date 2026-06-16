@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Loader2, LogOut, Moon, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, LogOut, Moon, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { apiFetch } from '@/lib/api/client';
@@ -22,8 +22,74 @@ interface V2SessionPanelProps {
   session: AuthMeResponse;
 }
 
+type V2SessionProblemCode = 'PROFILE_NOT_FOUND' | 'PROFILE_INACTIVE' | 'UNKNOWN';
+
+interface V2SessionProblemPanelProps {
+  code: V2SessionProblemCode;
+}
+
 function membershipLabel(membership: MembershipSummary): string {
   return `${membership.institutionName} · ${membership.roleKey}`;
+}
+
+function problemDescription(code: V2SessionProblemCode): string {
+  if (code === 'PROFILE_INACTIVE') {
+    return 'Tu cuenta existe, pero tu perfil institucional no está activo.';
+  }
+
+  return 'Tu cuenta existe, pero tu perfil institucional no está activo o no está configurado.';
+}
+
+async function logoutAndReturnToLogin(router: ReturnType<typeof useRouter>): Promise<void> {
+  const supabase = createClient();
+  await apiFetch('/api/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({ scope: 'local' }),
+  }).catch(() => undefined);
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  router.replace('/login');
+  router.refresh();
+}
+
+export function V2SessionProblemPanel({ code }: V2SessionProblemPanelProps) {
+  const router = useRouter();
+
+  return (
+    <main className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Moon className="h-5 w-5" aria-hidden />
+          </span>
+          <div>
+            <h1 className="text-xl font-semibold tracking-normal">Nocturna</h1>
+            <p className="text-sm text-muted-foreground">Sesión institucional</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-1 h-5 w-5 text-destructive" aria-hidden />
+              <div>
+                <CardTitle>No se pudo activar tu perfil institucional.</CardTitle>
+                <CardDescription>{problemDescription(code)}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Cierra sesión y contacta al administrador de tu institución si el problema continúa.
+            </p>
+            <Button type="button" variant="outline" onClick={() => logoutAndReturnToLogin(router)}>
+              <LogOut className="mr-2 h-4 w-4" aria-hidden />
+              Cerrar sesión
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
+  );
 }
 
 export function V2SessionPanel({ session }: V2SessionPanelProps) {
@@ -62,14 +128,7 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
   }
 
   async function logout(): Promise<void> {
-    const supabase = createClient();
-    await apiFetch('/api/auth/logout', {
-      method: 'POST',
-      body: JSON.stringify({ scope: 'local' }),
-    }).catch(() => undefined);
-    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-    router.replace('/login');
-    router.refresh();
+    await logoutAndReturnToLogin(router);
   }
 
   return (

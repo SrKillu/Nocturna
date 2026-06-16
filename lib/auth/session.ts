@@ -172,4 +172,7 @@ export function sessionErrorToApiError(err: SessionValidationError): ApiError {
   }
 }
 
-export { validateSessionV2 } from './active-membership';
+export {
+  SessionV2ValidationError,
+  validateSessionV2,
+} from './active-membership';

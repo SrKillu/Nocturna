@@ -16,6 +16,20 @@ import type {
 
 export const ACTIVE_MEMBERSHIP_COOKIE = 'active_membership_id';
 
+export type SessionV2ErrorCode =
+  | 'SESSION_NOT_AUTHENTICATED'
+  | 'PROFILE_NOT_FOUND'
+  | 'PROFILE_INACTIVE';
+
+export class SessionV2ValidationError extends Error {
+  public readonly code: SessionV2ErrorCode;
+
+  constructor(code: SessionV2ErrorCode, message?: string) {
+    super(message ?? code);
+    this.code = code;
+  }
+}
+
 type ProfileV2Row = {
   id: string;
   email: string;
@@ -196,7 +210,9 @@ export async function getProfileForSessionV2(userId: string): Promise<ProfileV2R
   }
 
   if (!profile || !profile.is_active) {
-    throw new Error('Invalid or inactive profile');
+    throw new SessionV2ValidationError(
+      profile ? 'PROFILE_INACTIVE' : 'PROFILE_NOT_FOUND'
+    );
   }
 
   return profile;
@@ -218,7 +234,7 @@ export async function validateSessionV2(): Promise<SessionContext> {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    throw error ?? new Error('User not authenticated');
+    throw new SessionV2ValidationError('SESSION_NOT_AUTHENTICATED');
   }
 
   const profile = await getProfileForSessionV2(user.id);

@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation';
-import { validateSessionV2 } from '@/lib/auth/session';
+import { SessionV2ValidationError, validateSessionV2 } from '@/lib/auth/session';
 import type { AuthMeResponse } from '@/lib/types/auth';
-import { V2SessionPanel } from '@/components/auth/v2-session-panel';
+import {
+  V2SessionPanel,
+  V2SessionProblemPanel,
+} from '@/components/auth/v2-session-panel';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,7 +22,15 @@ export default async function AuthV2SessionPage() {
     };
 
     return <V2SessionPanel session={response} />;
-  } catch {
-    redirect('/login?error=not_authenticated');
+  } catch (err) {
+    if (err instanceof SessionV2ValidationError) {
+      if (err.code === 'SESSION_NOT_AUTHENTICATED') {
+        redirect('/login?error=not_authenticated');
+      }
+
+      return <V2SessionProblemPanel code={err.code} />;
+    }
+
+    return <V2SessionProblemPanel code="UNKNOWN" />;
   }
 }
