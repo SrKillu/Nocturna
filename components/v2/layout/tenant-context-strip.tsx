@@ -9,7 +9,7 @@ interface TenantContextStripProps {
 }
 
 const roleLabels: Record<ActiveMembershipContext['roleKey'], string> = {
-  owner: 'Owner',
+  owner: 'Propietario',
   admin: 'Administrador',
   teacher: 'Docente',
   assistant: 'Asistente',
@@ -40,7 +40,7 @@ export function TenantContextStrip({
             : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
         }
       >
-        {activeMembership.institutionStatus === 'trial' ? 'Periodo de prueba' : 'Institución activa'}
+        {activeMembership.institutionStatus === 'trial' ? 'Período de prueba' : 'Institución activa'}
       </Badge>
     </div>
   );

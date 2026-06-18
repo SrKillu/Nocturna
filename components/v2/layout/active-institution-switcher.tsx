@@ -15,12 +15,42 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { apiFetch } from '@/lib/api/client';
-import type { ActiveMembershipContext, MembershipSummary } from '@/lib/types/auth';
+import type {
+  ActiveMembershipContext,
+  InstitutionStatus,
+  MembershipStatus,
+  MembershipSummary,
+  RoleKey,
+} from '@/lib/types/auth';
 
 interface ActiveInstitutionSwitcherProps {
   memberships: MembershipSummary[];
   activeMembership: ActiveMembershipContext;
 }
+
+const roleLabels: Record<RoleKey, string> = {
+  owner: 'Propietario',
+  admin: 'Administrador',
+  teacher: 'Docente',
+  assistant: 'Asistente',
+  student: 'Estudiante',
+  guardian: 'Encargado',
+  support: 'Soporte',
+};
+
+const membershipStatusLabels: Record<MembershipStatus, string> = {
+  active: 'Activo',
+  invited: 'Invitado',
+  suspended: 'Suspendido',
+  left: 'Finalizado',
+};
+
+const institutionStatusLabels: Record<InstitutionStatus, string> = {
+  active: 'Activa',
+  trial: 'Período de prueba',
+  suspended: 'Suspendida',
+  archived: 'Archivada',
+};
 
 function isSelectable(membership: MembershipSummary): boolean {
   return (
@@ -87,7 +117,7 @@ export function ActiveInstitutionSwitcher({
               {active?.institutionName ?? 'Institución activa'}
             </span>
             <span className="block truncate text-xs font-normal text-muted-foreground">
-              {active?.roleKey ?? activeMembership.roleKey}
+              {roleLabels[active?.roleKey ?? activeMembership.roleKey]}
             </span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -109,7 +139,8 @@ export function ActiveInstitutionSwitcher({
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{membership.institutionName}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {membership.roleKey} · {membership.institutionStatus}
+                  {roleLabels[membership.roleKey]} ·{' '}
+                  {institutionStatusLabels[membership.institutionStatus]}
                 </span>
               </span>
               {selected ? <Check className="mt-0.5 h-4 w-4 text-primary" aria-hidden /> : null}
@@ -133,7 +164,7 @@ export function ActiveInstitutionSwitcher({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{membership.institutionName}</span>
                   <span className="block text-xs">
-                    {membership.roleKey} · {membership.status}
+                    {roleLabels[membership.roleKey]} · {membershipStatusLabels[membership.status]}
                   </span>
                 </span>
               </DropdownMenuItem>

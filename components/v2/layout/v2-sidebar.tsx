@@ -6,7 +6,12 @@ import { Moon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { navGroupsForCapabilities } from '@/lib/rbac/nav-v2';
-import type { Capabilities, MembershipSummary, ProfileSummary } from '@/lib/types/auth';
+import type {
+  Capabilities,
+  MembershipSummary,
+  ProfileSummary,
+  RoleKey,
+} from '@/lib/types/auth';
 
 interface V2SidebarProps {
   profile: ProfileSummary;
@@ -14,6 +19,16 @@ interface V2SidebarProps {
   capabilities: Capabilities;
   onNavigate?: () => void;
 }
+
+const roleLabels: Record<RoleKey, string> = {
+  owner: 'Propietario',
+  admin: 'Administrador',
+  teacher: 'Docente',
+  assistant: 'Asistente',
+  student: 'Estudiante',
+  guardian: 'Encargado',
+  support: 'Soporte',
+};
 
 export function V2Sidebar(props: V2SidebarProps) {
   return (
@@ -58,7 +73,7 @@ export function V2SidebarContent({
           {activeMembership.institutionName}
         </p>
         <p className="mt-0.5 text-xs capitalize text-muted-foreground">
-          {activeMembership.roleKey}
+          {roleLabels[activeMembership.roleKey]}
         </p>
       </div>
 
