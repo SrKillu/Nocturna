@@ -1,0 +1,54 @@
+name: Nocturna Guardrails
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  protected-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject protected paths
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags origin "${BASE_REF}"
+          changed_files="$(git diff --name-only "origin/${BASE_REF}...HEAD")"
+          blocked=0
+
+          while IFS= read -r file; do
+            [ -z "${file}" ] && continue
+
+            case "${file}" in
+              .env*|*/.env*|scripts/staging/*|.staging-test-users.local.json|*/.staging-test-users.local.json|.codex-runtime/*|*/.codex-runtime/*|.next/*|*/.next/*|node_modules/*|*/node_modules/*|outputs/*)
+                echo "::error file=${file}::Protected path cannot be changed in a pull request."
+                blocked=1
+                ;;
+            esac
+
+            if [[ "${HEAD_REF}" == *dashboard* ]]; then
+              case "${file}" in
+                lib/supabase/middleware.ts|app/api/auth/*|app/auth/v2-session/*|components/auth/*|lib/auth/*|package.json|package-lock.json|supabase/*)
+                  echo "::error file=${file}::Dashboard pull requests cannot change this protected path."
+                  blocked=1
+                  ;;
+              esac
+            fi
+          done <<< "${changed_files}"
+
+          if [ "${blocked}" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "No protected paths changed."
