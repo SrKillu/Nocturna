@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getMockCoursesV2 } from '@/lib/mocks/courses-v2';
+import {
+  getMockCoursesV2,
+  getMockCourseWorkspaceV2,
+} from '@/lib/mocks/courses-v2';
 import {
   canAccessCoursesV2,
   courseAudienceForRole,
@@ -29,5 +32,19 @@ describe('Courses V2 foundation', () => {
     expect(studentCourses.length).toBeGreaterThan(0);
     expect(getMockCoursesV2('guardian')).toEqual([]);
     expect(studentCourses.every((course) => course.audiences.includes('student'))).toBe(true);
+  });
+
+  it('resolves a role-scoped workspace by safe course id', () => {
+    const workspace = getMockCourseWorkspaceV2('course-algebra-10a', 'student');
+
+    expect(workspace?.name).toBe('Álgebra I');
+    expect(workspace?.workQueue.length).toBeGreaterThan(0);
+    expect(workspace?.rosterPreview.length).toBeGreaterThan(0);
+  });
+
+  it('does not resolve unknown or out-of-scope course workspaces', () => {
+    expect(getMockCourseWorkspaceV2('course-unknown', 'admin')).toBeNull();
+    expect(getMockCourseWorkspaceV2('course-technology-8a', 'student')).toBeNull();
+    expect(getMockCourseWorkspaceV2('course-algebra-10a', 'guardian')).toBeNull();
   });
 });

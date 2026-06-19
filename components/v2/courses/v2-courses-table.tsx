@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { UsersRound } from 'lucide-react';
 
 import {
@@ -44,7 +45,12 @@ export function V2CoursesTable({ courses, filtered }: V2CoursesTableProps) {
             {courses.map((course) => (
               <TableRow key={course.id}>
                 <TableCell className="px-4 py-3">
-                  <p className="font-medium">{course.name}</p>
+                  <Link
+                    href={`/v2/courses/${course.id}`}
+                    className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                  >
+                    {course.name}
+                  </Link>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {course.levelLabel} · {course.scheduleLabel} · {course.categoryLabel}
                   </p>
@@ -69,7 +75,12 @@ export function V2CoursesTable({ courses, filtered }: V2CoursesTableProps) {
           <li key={course.id} className="space-y-3 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-medium">{course.name}</p>
+                <Link
+                  href={`/v2/courses/${course.id}`}
+                  className="block truncate font-medium underline-offset-4 hover:text-primary hover:underline"
+                >
+                  {course.name}
+                </Link>
                 <p className="mt-0.5 font-mono text-xs text-muted-foreground">{course.code}</p>
               </div>
               <V2CourseStatusBadge status={course.status} />
