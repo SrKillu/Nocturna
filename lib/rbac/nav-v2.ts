@@ -1,5 +1,6 @@
 import {
   BookOpenCheck,
+  GraduationCap,
   LayoutDashboard,
   UsersRound,
   type LucideIcon,
@@ -17,6 +18,7 @@ export interface V2NavItem {
   icon: LucideIcon;
   group: V2NavGroupLabel;
   requiredCapabilities: readonly CapabilityKey[];
+  excludedCapabilities?: readonly CapabilityKey[];
   capabilityMode: V2CapabilityMode;
   availability: V2NavAvailability;
 }
@@ -57,9 +59,25 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     capabilityMode: 'any',
     availability: 'active',
   },
+  {
+    id: 'my-space',
+    label: 'Mi espacio',
+    href: '/v2/my-space',
+    icon: GraduationCap,
+    group: 'Académico',
+    requiredCapabilities: ['canSubmit'],
+    excludedCapabilities: ['canManageInstitution', 'canManageCourses', 'canGrade'],
+    capabilityMode: 'all',
+    availability: 'active',
+  },
 ];
 
 function hasRequiredCapabilities(item: V2NavItem, capabilities: Capabilities): boolean {
+  if (
+    item.excludedCapabilities?.some((key) => capabilities[key] === true)
+  ) {
+    return false;
+  }
   if (item.requiredCapabilities.length === 0) return true;
   const checks = item.requiredCapabilities.map((key) => capabilities[key] === true);
   return item.capabilityMode === 'all' ? checks.every(Boolean) : checks.some(Boolean);
