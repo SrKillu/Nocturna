@@ -1,11 +1,12 @@
 import {
   BookOpenCheck,
   GraduationCap,
+  HeartHandshake,
   LayoutDashboard,
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
-import type { Capabilities, CapabilityKey } from '@/lib/types/auth';
+import type { Capabilities, CapabilityKey, RoleKey } from '@/lib/types/auth';
 
 export type V2NavAvailability = 'active' | 'planned';
 export type V2CapabilityMode = 'all' | 'any';
@@ -19,6 +20,7 @@ export interface V2NavItem {
   group: V2NavGroupLabel;
   requiredCapabilities: readonly CapabilityKey[];
   excludedCapabilities?: readonly CapabilityKey[];
+  requiredRoles?: readonly RoleKey[];
   capabilityMode: V2CapabilityMode;
   availability: V2NavAvailability;
 }
@@ -70,9 +72,27 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     capabilityMode: 'all',
     availability: 'active',
   },
+  {
+    id: 'guardian-space',
+    label: 'Espacio del encargado',
+    href: '/v2/guardian-space',
+    icon: HeartHandshake,
+    group: 'Académico',
+    requiredCapabilities: ['canViewReports'],
+    requiredRoles: ['guardian'],
+    capabilityMode: 'all',
+    availability: 'active',
+  },
 ];
 
-function hasRequiredCapabilities(item: V2NavItem, capabilities: Capabilities): boolean {
+function hasRequiredCapabilities(
+  item: V2NavItem,
+  capabilities: Capabilities,
+  roleKey?: RoleKey
+): boolean {
+  if (item.requiredRoles && (!roleKey || !item.requiredRoles.includes(roleKey))) {
+    return false;
+  }
   if (
     item.excludedCapabilities?.some((key) => capabilities[key] === true)
   ) {
@@ -83,11 +103,14 @@ function hasRequiredCapabilities(item: V2NavItem, capabilities: Capabilities): b
   return item.capabilityMode === 'all' ? checks.every(Boolean) : checks.some(Boolean);
 }
 
-export function navGroupsForCapabilities(capabilities: Capabilities): V2NavGroup[] {
+export function navGroupsForCapabilities(
+  capabilities: Capabilities,
+  roleKey?: RoleKey
+): V2NavGroup[] {
   const visible = NAV_ITEMS_V2.filter(
     (item) =>
       item.availability === 'active' &&
-      hasRequiredCapabilities(item, capabilities)
+      hasRequiredCapabilities(item, capabilities, roleKey)
   );
 
   const groupOrder: readonly V2NavGroupLabel[] = ['Inicio', 'Académico'];

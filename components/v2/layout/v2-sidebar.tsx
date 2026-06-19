@@ -45,7 +45,7 @@ export function V2SidebarContent({
   onNavigate,
 }: V2SidebarProps) {
   const pathname = usePathname();
-  const groups = navGroupsForCapabilities(capabilities);
+  const groups = navGroupsForCapabilities(capabilities, activeMembership.roleKey);
 
   return (
     <div className="flex h-full flex-col">
