@@ -1,0 +1,107 @@
+import {
+  courseAudienceForRole,
+  type CourseV2Audience,
+  type CourseV2ListItem,
+} from '@/lib/types/courses-v2';
+import type { RoleKey } from '@/lib/types/auth';
+
+const courses = [
+  {
+    id: 'course-algebra-10a',
+    name: 'Álgebra I',
+    code: 'MAT-10A',
+    teacherName: 'María Solís',
+    studentCount: 28,
+    status: 'active',
+    level: 'secondary',
+    levelLabel: 'Secundaria',
+    scheduleLabel: 'Matutina',
+    category: 'sciences',
+    categoryLabel: 'Ciencias',
+    nextAction: 'Revisar planificación',
+    audiences: ['institution', 'teacher', 'student'],
+  },
+  {
+    id: 'course-english-11b',
+    name: 'Inglés B2',
+    code: 'ING-11B',
+    teacherName: 'Daniel Rojas',
+    studentCount: 24,
+    status: 'active',
+    level: 'secondary',
+    levelLabel: 'Secundaria',
+    scheduleLabel: 'Matutina',
+    category: 'languages',
+    categoryLabel: 'Idiomas',
+    nextAction: 'Registrar asistencia',
+    audiences: ['institution', 'teacher', 'student'],
+  },
+  {
+    id: 'course-science-6a',
+    name: 'Ciencias Integradas',
+    code: 'CIE-06A',
+    teacherName: 'Elena Vega',
+    studentCount: 31,
+    status: 'active',
+    level: 'primary',
+    levelLabel: 'Primaria',
+    scheduleLabel: 'Matutina',
+    category: 'sciences',
+    categoryLabel: 'Ciencias',
+    nextAction: 'Publicar material',
+    audiences: ['institution', 'teacher'],
+  },
+  {
+    id: 'course-history-9c',
+    name: 'Historia Contemporánea',
+    code: 'HIS-09C',
+    teacherName: 'Andrés Mora',
+    studentCount: 26,
+    status: 'planning',
+    level: 'secondary',
+    levelLabel: 'Secundaria',
+    scheduleLabel: 'Vespertina',
+    category: 'humanities',
+    categoryLabel: 'Humanidades',
+    nextAction: 'Completar programa',
+    audiences: ['institution', 'teacher'],
+  },
+  {
+    id: 'course-technology-8a',
+    name: 'Tecnología Aplicada',
+    code: 'TEC-08A',
+    teacherName: 'Sofía Castro',
+    studentCount: 22,
+    status: 'planning',
+    level: 'secondary',
+    levelLabel: 'Secundaria',
+    scheduleLabel: 'Vespertina',
+    category: 'technology',
+    categoryLabel: 'Tecnología',
+    nextAction: 'Asignar recursos',
+    audiences: ['institution'],
+  },
+  {
+    id: 'course-reading-5b',
+    name: 'Lectura y Escritura',
+    code: 'ESP-05B',
+    teacherName: 'Lucía Herrera',
+    studentCount: 29,
+    status: 'completed',
+    level: 'primary',
+    levelLabel: 'Primaria',
+    scheduleLabel: 'Matutina',
+    category: 'languages',
+    categoryLabel: 'Idiomas',
+    nextAction: 'Consultar cierre',
+    audiences: ['institution', 'student'],
+  },
+] as const satisfies readonly CourseV2ListItem[];
+
+export function getMockCoursesV2(roleKey: RoleKey): readonly CourseV2ListItem[] {
+  const audience = courseAudienceForRole(roleKey);
+  if (!audience) return [];
+  return courses.filter((course) =>
+    (course.audiences as readonly CourseV2Audience[]).includes(audience)
+  );
+}
