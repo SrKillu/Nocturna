@@ -110,6 +110,48 @@ describe('middleware · auth decision tree', () => {
     expect(res.headers.get('location')).toMatch(/\/login\?error=not_authenticated/);
   });
 
+  it('redirects unauthenticated V2 routes to /login', async () => {
+    const updateSession = await loadMiddleware();
+    const res = await updateSession(
+      mockRequest({ method: 'GET', path: '/v2/dashboard' })
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toMatch(/\/login\?error=not_authenticated/);
+  });
+
+  it('lets authenticated V2 routes reach the server-side V2 session validator', async () => {
+    authState.user = { id: 'u1', app_metadata: {} };
+    const updateSession = await loadMiddleware();
+    const res = await updateSession(
+      mockRequest({ method: 'GET', path: '/v2/dashboard' })
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('lets authenticated handler-validated Auth V2 APIs reach their handlers', async () => {
+    authState.user = { id: 'u1', app_metadata: {} };
+    const updateSession = await loadMiddleware();
+    const res = await updateSession(
+      mockRequest({ method: 'GET', path: '/api/auth/me-v2' })
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('runs CSRF before the handler-validated Auth V2 API bypass', async () => {
+    authState.user = { id: 'u1', app_metadata: {} };
+    const updateSession = await loadMiddleware();
+    const res = await updateSession(
+      mockRequest({
+        method: 'POST',
+        path: '/api/memberships/active',
+        headers: { origin: 'https://nocturna.test' },
+      })
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error.message).toMatch(/csrf/);
+  });
+
   it('403 when authenticated but missing role claim', async () => {
     authState.user = { id: 'u1', app_metadata: {} };
     const updateSession = await loadMiddleware();

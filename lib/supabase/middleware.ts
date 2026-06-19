@@ -54,6 +54,7 @@ function isProtectedApi(pathname: string): boolean {
 }
 
 const PROTECTED_PAGE_PREFIXES = [
+  '/v2',
   '/dashboard',
   '/courses',
   '/tasks',
@@ -92,6 +93,10 @@ const AUTH_V2_HANDLER_VALIDATED_API_PATHS = new Set([
   '/api/auth/me-v2',
   '/api/memberships/active',
 ]);
+
+function isAuthV2ServerValidatedPage(pathname: string): boolean {
+  return pathname === '/v2' || pathname.startsWith('/v2/');
+}
 
 function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PAGE_PREFIXES.some(
@@ -265,6 +270,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const tenantOptional = tenantOptionalPage || tenantOptionalApi;
   const isAdminApi = pathname.startsWith('/api/admin');
   const isAuthV2HandlerValidatedApi = AUTH_V2_HANDLER_VALIDATED_API_PATHS.has(pathname);
+  const isAuthV2Page = isAuthV2ServerValidatedPage(pathname);
 
   // --- Unauthenticated ---------------------------------------------------
   if (!user) {
@@ -304,12 +310,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     return NextResponse.redirect(url);
   }
 
-  // Auth V2 routes are not public: the user has already been authenticated via
-  // Supabase above, CSRF has already run for mutating requests, and the route
-  // handlers perform the V2 DB/membership authorization checks. Do not require
-  // legacy JWT claims here, because V2 users are resolved from profiles +
-  // institution_memberships instead of app_metadata.user_role.
-  if (isAuthV2HandlerValidatedApi) {
+  // Auth V2 boundaries are not public: the user has already been authenticated
+  // via Supabase above and CSRF has already run for mutating requests. API
+  // handlers and the /v2 server layout perform the V2 profile/membership checks.
+  // Do not require legacy JWT claims here, because V2 users are resolved from
+  // profiles + institution_memberships instead of app_metadata.user_role.
+  if (isAuthV2HandlerValidatedApi || isAuthV2Page) {
     return innerResponse;
   }
 
