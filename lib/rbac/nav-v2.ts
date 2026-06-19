@@ -1,5 +1,6 @@
 import {
   BookOpenCheck,
+  CalendarCheck,
   GraduationCap,
   HeartHandshake,
   LayoutDashboard,
@@ -59,6 +60,16 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     group: 'Académico',
     requiredCapabilities: ['canManageCourses', 'canGrade'],
     capabilityMode: 'any',
+    availability: 'active',
+  },
+  {
+    id: 'attendance',
+    label: 'Asistencia',
+    href: '/v2/attendance',
+    icon: CalendarCheck,
+    group: 'Académico',
+    requiredCapabilities: ['canManageAttendance'],
+    capabilityMode: 'all',
     availability: 'active',
   },
   {
