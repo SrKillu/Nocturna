@@ -21,6 +21,48 @@ export interface CourseV2ListItem {
   audiences: readonly CourseV2Audience[];
 }
 
+export type CourseV2WorkPriority = 'high' | 'medium' | 'low';
+export type CourseV2PreviewStatus = 'active' | 'pending' | 'completed' | 'draft';
+
+export interface CourseV2WorkItem {
+  id: string;
+  title: string;
+  context: string;
+  dueLabel: string;
+  priority: CourseV2WorkPriority;
+}
+
+export interface CourseV2RosterMember {
+  id: string;
+  name: string;
+  detail: string;
+  status: CourseV2PreviewStatus;
+}
+
+export interface CourseV2EvaluationPreview {
+  id: string;
+  title: string;
+  detail: string;
+  status: CourseV2PreviewStatus;
+}
+
+export interface CourseV2MaterialPreview {
+  id: string;
+  title: string;
+  detail: string;
+  status: CourseV2PreviewStatus;
+}
+
+export interface CourseV2Workspace extends CourseV2ListItem {
+  summary: string;
+  termLabel: string;
+  roomLabel: string;
+  workQueue: readonly CourseV2WorkItem[];
+  rosterPreview: readonly CourseV2RosterMember[];
+  evaluationsPreview: readonly CourseV2EvaluationPreview[];
+  materialsPreview: readonly CourseV2MaterialPreview[];
+}
+
 export const COURSES_V2_CAPABILITIES = [
   'canManageCourses',
   'canGrade',
