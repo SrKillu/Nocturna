@@ -22,6 +22,46 @@ export interface StudentV2ListItem {
   audiences: readonly StudentV2Audience[];
 }
 
+export interface StudentV2CoursePreview {
+  id: string;
+  name: string;
+  code: string;
+  sectionLabel: string;
+  progressLabel: string;
+}
+
+export interface StudentV2AttendanceSummary {
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  trendLabel: string;
+}
+
+export interface StudentV2EvaluationPreview {
+  id: string;
+  title: string;
+  courseName: string;
+  resultLabel: string;
+  statusLabel: string;
+}
+
+export interface StudentV2NotePreview {
+  id: string;
+  title: string;
+  detail: string;
+  dateLabel: string;
+}
+
+export interface StudentV2Profile extends StudentV2ListItem {
+  periodLabel: string;
+  summaryDetail: string;
+  relatedCourses: readonly StudentV2CoursePreview[];
+  attendanceSummary: StudentV2AttendanceSummary;
+  evaluationsPreview: readonly StudentV2EvaluationPreview[];
+  notesPreview: readonly StudentV2NotePreview[];
+  nextActions: readonly string[];
+}
+
 export interface StudentV2FilterState {
   query: string;
   status: StudentV2Status | 'all';

@@ -3,6 +3,7 @@ import {
   studentAudienceForRole,
   type StudentV2Audience,
   type StudentV2ListItem,
+  type StudentV2Profile,
 } from '@/lib/types/students-v2';
 
 const students = [
@@ -142,4 +143,110 @@ export function getMockStudentsV2(roleKey: RoleKey): readonly StudentV2ListItem[
   return students.filter((student) =>
     (student.audiences as readonly StudentV2Audience[]).includes(audience)
   );
+}
+
+const summaryDetails: Record<string, string> = {
+  'student-valeria-gomez':
+    'Mantiene un ritmo constante, completa las actividades y participa de forma regular.',
+  'student-mateo-jimenez':
+    'Presenta avances parciales y se beneficia de seguimiento breve en cada sesión.',
+  'student-camila-vargas':
+    'Muestra dominio sostenido y responde bien a actividades de mayor complejidad.',
+  'student-diego-arias':
+    'Tiene actividades pendientes y requiere una secuencia de recuperación acompañada.',
+  'student-sofia-mendez':
+    'Consolida los aprendizajes esperados y mantiene evidencias académicas completas.',
+  'student-lucas-quesada':
+    'No registra actividad reciente; se recomienda validar su continuidad académica.',
+  'student-emma-salazar':
+    'Finalizó el curso con evidencias suficientes y seguimiento académico al día.',
+  'student-nicolas-rivera':
+    'Está próximo a iniciar el proyecto y necesita confirmar disponibilidad de recursos.',
+};
+
+const courseCodes: Record<string, string> = {
+  'course-algebra-10a': 'MAT-10A',
+  'course-english-11b': 'ING-11B',
+  'course-science-6a': 'CIE-06A',
+  'course-history-9c': 'HIS-09C',
+  'course-reading-5b': 'ESP-05B',
+  'course-technology-8a': 'TEC-08A',
+};
+
+function buildStudentProfile(student: StudentV2ListItem): StudentV2Profile {
+  const attendedSessions = Math.round(student.attendancePercent * 0.24);
+  const absentCount = Math.max(0, 24 - attendedSessions);
+  const lateCount = student.risk === 'on_track' ? 1 : student.risk === 'watch' ? 2 : 3;
+
+  return {
+    ...student,
+    periodLabel: 'Ciclo lectivo 2026',
+    summaryDetail:
+      summaryDetails[student.id] ??
+      'Seguimiento académico de demostración para la membresía activa.',
+    relatedCourses: [
+      {
+        id: student.courseId,
+        name: student.courseName,
+        code: courseCodes[student.courseId] ?? 'CURSO-V2',
+        sectionLabel: student.sectionLabel,
+        progressLabel: student.academicSummary,
+      },
+    ],
+    attendanceSummary: {
+      presentCount: Math.max(0, attendedSessions - lateCount),
+      lateCount,
+      absentCount,
+      trendLabel:
+        student.attendancePercent >= 90
+          ? 'Asistencia estable'
+          : student.attendancePercent >= 80
+            ? 'Requiere observación'
+            : 'Seguimiento prioritario',
+    },
+    evaluationsPreview: [
+      {
+        id: `${student.id}-evaluation-1`,
+        title: 'Actividad diagnóstica',
+        courseName: student.courseName,
+        resultLabel: student.risk === 'priority' ? 'Pendiente' : 'Completada',
+        statusLabel: student.risk === 'priority' ? 'Requiere revisión' : 'Registrada',
+      },
+      {
+        id: `${student.id}-evaluation-2`,
+        title: 'Evidencia de unidad',
+        courseName: student.courseName,
+        resultLabel: student.academicSummary,
+        statusLabel: 'Vista previa',
+      },
+    ],
+    notesPreview: [
+      {
+        id: `${student.id}-note-1`,
+        title: 'Seguimiento académico',
+        detail: student.nextAction,
+        dateLabel: 'Esta semana',
+      },
+      {
+        id: `${student.id}-note-2`,
+        title: 'Observación de progreso',
+        detail: 'Registro de demostración sin datos personales sensibles.',
+        dateLabel: 'Semana anterior',
+      },
+    ],
+    nextActions: [
+      student.nextAction,
+      student.risk === 'on_track'
+        ? 'Mantener el ritmo de seguimiento'
+        : 'Revisar evidencias en la próxima sesión',
+    ],
+  };
+}
+
+export function getMockStudentProfileV2(
+  studentId: string,
+  roleKey: RoleKey
+): StudentV2Profile | null {
+  const student = getMockStudentsV2(roleKey).find((item) => item.id === studentId);
+  return student ? buildStudentProfile(student) : null;
 }
