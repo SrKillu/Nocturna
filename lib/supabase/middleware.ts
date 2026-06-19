@@ -88,6 +88,11 @@ const TENANT_OPTIONAL_API_PREFIXES = [
   '/api/invites/lookup',
 ];
 
+const AUTH_V2_HANDLER_VALIDATED_API_PATHS = new Set([
+  '/api/auth/me-v2',
+  '/api/memberships/active',
+]);
+
 function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PAGE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
@@ -259,6 +264,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   );
   const tenantOptional = tenantOptionalPage || tenantOptionalApi;
   const isAdminApi = pathname.startsWith('/api/admin');
+  const isAuthV2HandlerValidatedApi = AUTH_V2_HANDLER_VALIDATED_API_PATHS.has(pathname);
 
   // --- Unauthenticated ---------------------------------------------------
   if (!user) {
@@ -287,18 +293,36 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     session_version?: number;
   } = rawClaims;
 
-  // Already logged in but hitting auth pages -> send to dashboard.
+  // Already logged in but hitting auth pages -> send to the matching runtime.
+  // Legacy V1 users carry user_role claims and can continue to /dashboard.
+  // V2 staging users are resolved by the route handler from DB memberships, so
+  // keep them away from the legacy dashboard/profile gate.
   if (AUTH_PAGES.has(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
+    url.pathname = claims.user_role ? '/dashboard' : '/auth/v2-session';
+    url.search = '';
     return NextResponse.redirect(url);
+  }
+
+  // Auth V2 routes are not public: the user has already been authenticated via
+  // Supabase above, CSRF has already run for mutating requests, and the route
+  // handlers perform the V2 DB/membership authorization checks. Do not require
+  // legacy JWT claims here, because V2 users are resolved from profiles +
+  // institution_memberships instead of app_metadata.user_role.
+  if (isAuthV2HandlerValidatedApi) {
+    return innerResponse;
   }
 
   // JWT-claim gate (first layer). Missing claims == missing profile or inactive.
   if (!claims.user_role) {
     logDeny(request, 'missing_role_claim');
     if (protectedApi) return jsonError(403, 'FORBIDDEN', 'Invalid profile');
-    if (protectedPage) return redirectToLogin(request, 'invalid_profile');
+    if (protectedPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth/v2-session';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
     return innerResponse;
   }
   if (!claims.institution_id) {

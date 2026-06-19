@@ -3,7 +3,9 @@ import { ZodError } from 'zod';
 
 export type ErrorCode =
   | 'VALIDATION_ERROR'
+  | 'UNAUTHENTICATED'
   | 'UNAUTHORIZED'
+  | 'MEMBERSHIP_REQUIRED'
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
@@ -20,7 +22,9 @@ export interface ApiErrorShape {
 
 const STATUS_MAP: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
+  UNAUTHENTICATED: 401,
   UNAUTHORIZED: 401,
+  MEMBERSHIP_REQUIRED: 403,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,

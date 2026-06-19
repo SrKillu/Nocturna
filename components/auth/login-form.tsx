@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/api/client';
+import type { AuthMeResponse } from '@/lib/types/auth';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 import { supabaseErrorToMessage } from '@/lib/auth/error-map';
 import { Button } from '@/components/ui/button';
@@ -25,6 +27,29 @@ import {
 
 interface LoginFormProps {
   nextPath: string;
+}
+
+async function resolveV2SessionAfterLogin(): Promise<boolean> {
+  const res = await fetch('/api/auth/me-v2', {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { accept: 'application/json' },
+  });
+
+  if (!res.ok) return false;
+
+  const json = (await res.json().catch(() => null)) as { data?: AuthMeResponse } | null;
+  const session = json?.data;
+  if (!session) return false;
+
+  if (session.activeMembership?.membershipId) {
+    await apiFetch('/api/memberships/active', {
+      method: 'POST',
+      body: JSON.stringify({ membershipId: session.activeMembership.membershipId }),
+    }).catch(() => undefined);
+  }
+
+  return true;
 }
 
 /**
@@ -66,7 +91,8 @@ export function LoginForm({ nextPath }: LoginFormProps) {
       return;
     }
     toast.success('Bienvenido·a de vuelta');
-    router.replace(nextPath);
+    const isV2Session = await resolveV2SessionAfterLogin().catch(() => false);
+    router.replace(isV2Session ? '/auth/v2-session' : nextPath);
     router.refresh();
   }
 
