@@ -1,15 +1,16 @@
-import { LayoutDashboard, type LucideIcon } from 'lucide-react';
+import { BookOpenCheck, LayoutDashboard, type LucideIcon } from 'lucide-react';
 import type { Capabilities, CapabilityKey } from '@/lib/types/auth';
 
 export type V2NavAvailability = 'active' | 'planned';
 export type V2CapabilityMode = 'all' | 'any';
+export type V2NavGroupLabel = 'Inicio' | 'Académico';
 
 export interface V2NavItem {
   id: string;
   label: string;
   href: string;
   icon: LucideIcon;
-  group: 'Inicio';
+  group: V2NavGroupLabel;
   requiredCapabilities: readonly CapabilityKey[];
   capabilityMode: V2CapabilityMode;
   availability: V2NavAvailability;
@@ -31,6 +32,16 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     capabilityMode: 'all',
     availability: 'active',
   },
+  {
+    id: 'courses',
+    label: 'Cursos',
+    href: '/v2/courses',
+    icon: BookOpenCheck,
+    group: 'Académico',
+    requiredCapabilities: ['canManageCourses', 'canGrade', 'canSubmit'],
+    capabilityMode: 'any',
+    availability: 'active',
+  },
 ];
 
 function hasRequiredCapabilities(item: V2NavItem, capabilities: Capabilities): boolean {
@@ -46,5 +57,9 @@ export function navGroupsForCapabilities(capabilities: Capabilities): V2NavGroup
       hasRequiredCapabilities(item, capabilities)
   );
 
-  return visible.length > 0 ? [{ label: 'Inicio', items: visible }] : [];
+  const groupOrder: readonly V2NavGroupLabel[] = ['Inicio', 'Académico'];
+  return groupOrder.flatMap((label) => {
+    const items = visible.filter((item) => item.group === label);
+    return items.length > 0 ? [{ label, items }] : [];
+  });
 }
