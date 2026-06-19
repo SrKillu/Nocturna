@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { BookOpenCheck, CalendarCheck } from 'lucide-react';
 
 import {
@@ -48,7 +49,12 @@ export function V2StudentsTable({ students, filtered }: V2StudentsTableProps) {
             {students.map((student) => (
               <TableRow key={student.id}>
                 <TableCell className="px-4 py-3">
-                  <p className="font-medium">{student.name}</p>
+                  <Link
+                    href={`/v2/students/${student.id}`}
+                    className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                  >
+                    {student.name}
+                  </Link>
                   <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                     {student.code}
                   </p>
@@ -84,7 +90,12 @@ export function V2StudentsTable({ students, filtered }: V2StudentsTableProps) {
           <li key={student.id} className="space-y-3 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-medium">{student.name}</p>
+                <Link
+                  href={`/v2/students/${student.id}`}
+                  className="block truncate font-medium underline-offset-4 hover:text-primary hover:underline"
+                >
+                  {student.name}
+                </Link>
                 <p className="mt-0.5 font-mono text-xs text-muted-foreground">{student.code}</p>
               </div>
               <V2StudentStatusBadge status={student.status} />
