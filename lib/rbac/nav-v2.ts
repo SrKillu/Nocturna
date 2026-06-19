@@ -1,4 +1,9 @@
-import { BookOpenCheck, LayoutDashboard, type LucideIcon } from 'lucide-react';
+import {
+  BookOpenCheck,
+  LayoutDashboard,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Capabilities, CapabilityKey } from '@/lib/types/auth';
 
 export type V2NavAvailability = 'active' | 'planned';
@@ -39,6 +44,16 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     icon: BookOpenCheck,
     group: 'Académico',
     requiredCapabilities: ['canManageCourses', 'canGrade', 'canSubmit'],
+    capabilityMode: 'any',
+    availability: 'active',
+  },
+  {
+    id: 'students',
+    label: 'Estudiantes',
+    href: '/v2/students',
+    icon: UsersRound,
+    group: 'Académico',
+    requiredCapabilities: ['canManageCourses', 'canGrade'],
     capabilityMode: 'any',
     availability: 'active',
   },
