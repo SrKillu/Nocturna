@@ -4,46 +4,82 @@ import {
   CAPABILITY_KEYS,
   getCapabilitiesForRoleKey,
 } from '@/lib/rbac/capabilities';
-import type { RoleKey } from '@/lib/types/auth';
+import type { CapabilityKey, RoleKey } from '@/lib/types/auth';
+
+const ROLE_KEYS: readonly RoleKey[] = [
+  'owner',
+  'admin',
+  'teacher',
+  'assistant',
+  'student',
+  'guardian',
+  'support',
+];
+
+function expectCapabilityMatrix(
+  capability: CapabilityKey,
+  allowedRoles: readonly RoleKey[]
+) {
+  for (const roleKey of ROLE_KEYS) {
+    expect(getCapabilitiesForRoleKey(roleKey)[capability]).toBe(
+      allowedRoles.includes(roleKey)
+    );
+  }
+}
 
 describe('V2 capability matrix', () => {
-  it('registers the settings view capability', () => {
-    expect(CAPABILITY_KEYS).toContain('canViewInstitutionSettings');
+  it('registers the explicit route-purpose capabilities', () => {
+    expect(CAPABILITY_KEYS).toEqual(
+      expect.arrayContaining([
+        'canViewAuditLog',
+        'canViewSchedule',
+        'canAccessLibrary',
+        'canViewLinkedStudents',
+        'canViewNotifications',
+      ])
+    );
   });
 
-  it('grants settings view access only to owner and admin', () => {
-    const expectedByRole: Readonly<Record<RoleKey, boolean>> = {
-      owner: true,
-      admin: true,
-      teacher: false,
-      assistant: false,
-      student: false,
-      guardian: false,
-      support: false,
-    };
-
-    for (const [roleKey, expected] of Object.entries(expectedByRole)) {
-      expect(
-        getCapabilitiesForRoleKey(roleKey as RoleKey)
-          .canViewInstitutionSettings
-      ).toBe(expected);
-    }
-  });
-
-  it('keeps institution management restricted to owner', () => {
-    expect(getCapabilitiesForRoleKey('owner').canManageInstitution).toBe(true);
-    expect(getCapabilitiesForRoleKey('admin').canManageInstitution).toBe(false);
-
-    for (const roleKey of [
+  it('grants each route-purpose capability to the approved roles only', () => {
+    expectCapabilityMatrix('canViewAuditLog', ['owner', 'admin']);
+    expectCapabilityMatrix('canViewSchedule', [
+      'owner',
+      'admin',
       'teacher',
       'assistant',
-      'student',
+    ]);
+    expectCapabilityMatrix('canAccessLibrary', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectCapabilityMatrix('canViewLinkedStudents', ['guardian']);
+    expectCapabilityMatrix('canViewNotifications', ROLE_KEYS);
+  });
+
+  it('keeps the existing capability assignments unchanged', () => {
+    expectCapabilityMatrix('canManageInstitution', ['owner']);
+    expectCapabilityMatrix('canViewInstitutionSettings', ['owner', 'admin']);
+    expectCapabilityMatrix('canManageAttendance', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectCapabilityMatrix('canManageMaterials', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectCapabilityMatrix('canViewReports', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
       'guardian',
       'support',
-    ] as const) {
-      expect(getCapabilitiesForRoleKey(roleKey).canManageInstitution).toBe(
-        false
-      );
-    }
+    ]);
   });
 });

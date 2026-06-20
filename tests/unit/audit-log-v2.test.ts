@@ -20,14 +20,14 @@ describe('Audit Log V2 foundation', () => {
     expect(filterAuditLogV2(events, { query: '', module: 'auth', eventType: 'denied-attempt', severity: 'critical', status: 'review', actorId: 'actor-unknown-demo', period: 'week' }).map((event) => event.id)).toEqual(['audit-denied-attempt']);
   });
   it('supports an empty filtered state', () => expect(filterAuditLogV2(getMockAuditLogV2('owner').events, { ...emptyFilters, query: 'evento inexistente' })).toEqual([]));
-  it('requires settings view capability and owner/admin role scope', () => {
+  it('requires audit-log view capability and owner/admin role scope', () => {
     expect(canAccessAuditLogV2('owner', ROLE_CAPABILITIES.owner)).toBe(true);
     expect(canAccessAuditLogV2('admin', ROLE_CAPABILITIES.admin)).toBe(true);
-    const teacherWithCapability: Capabilities = { ...ROLE_CAPABILITIES.teacher, canViewInstitutionSettings: true };
+    const teacherWithCapability: Capabilities = { ...ROLE_CAPABILITIES.teacher, canViewAuditLog: true };
     expect(canAccessAuditLogV2('teacher', teacherWithCapability)).toBe(false);
   });
-  it('does not allow substitute capabilities', () => {
-    const substitutes: Capabilities = { ...ROLE_CAPABILITIES.admin, canViewInstitutionSettings: false, canManageInstitution: true, canManageUsers: true, canViewReports: true, canGrade: true, canSubmit: true, canManageCourses: true };
+  it('does not allow the replaced settings capability or other substitutes', () => {
+    const substitutes: Capabilities = { ...ROLE_CAPABILITIES.admin, canViewAuditLog: false, canViewInstitutionSettings: true, canManageInstitution: true, canManageUsers: true, canViewReports: true, canGrade: true, canSubmit: true, canManageCourses: true };
     expect(canAccessAuditLogV2('admin', substitutes)).toBe(false);
   });
   it('shows audit navigation only to owner and admin', () => {

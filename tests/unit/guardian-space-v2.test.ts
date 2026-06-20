@@ -27,16 +27,17 @@ describe('Guardian Space V2 foundation', () => {
     expect(getMockGuardianSpaceV2('support')).toBeNull();
   });
 
-  it('requires guardian role plus the existing report capability', () => {
-    expect(canAccessGuardianSpaceV2('guardian', { canViewReports: true })).toBe(true);
+  it('requires guardian role plus linked-student visibility', () => {
+    expect(canAccessGuardianSpaceV2('guardian', { canViewLinkedStudents: true })).toBe(true);
     expect(canAccessGuardianSpaceV2('guardian', { canUseChat: true })).toBe(false);
-    expect(canAccessGuardianSpaceV2('support', { canViewReports: true })).toBe(false);
-    expect(canAccessGuardianSpaceV2('admin', { canViewReports: true })).toBe(false);
+    expect(canAccessGuardianSpaceV2('support', { canViewLinkedStudents: true })).toBe(false);
+    expect(canAccessGuardianSpaceV2('admin', { canViewLinkedStudents: true })).toBe(false);
+    expect(canAccessGuardianSpaceV2('guardian', { canViewReports: true })).toBe(false);
   });
 
   it('shows guardian navigation only to guardian', () => {
     expect(
-      visibleNavIds({ canViewReports: true, canUseChat: true }, 'guardian')
+      visibleNavIds({ canViewLinkedStudents: true, canUseChat: true }, 'guardian')
     ).toContain('guardian-space');
     expect(visibleNavIds({ canSubmit: true }, 'student')).not.toContain(
       'guardian-space'
@@ -48,13 +49,13 @@ describe('Guardian Space V2 foundation', () => {
       'guardian-space'
     );
     expect(
-      visibleNavIds({ canViewReports: true, canUseChat: true }, 'support')
+      visibleNavIds({ canViewLinkedStudents: true, canUseChat: true }, 'support')
     ).not.toContain('guardian-space');
   });
 
   it('does not expose institutional students navigation to guardian', () => {
     const guardianNavigation = visibleNavIds(
-      { canViewReports: true, canUseChat: true },
+      { canViewLinkedStudents: true, canUseChat: true },
       'guardian'
     );
 

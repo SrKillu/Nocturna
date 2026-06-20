@@ -11,7 +11,9 @@ const navIds = (roleKey: RoleKey) => navGroupsForCapabilities(getCapabilitiesFor
 describe('Notifications Center V2 foundation', () => {
   it('provides role-scoped fixtures for every active V2 role', () => {
     for (const role of ['owner', 'admin', 'teacher', 'assistant', 'student', 'guardian', 'support'] as const) {
-      expect(canAccessNotificationsV2(role)).toBe(true);
+      expect(
+        canAccessNotificationsV2(role, getCapabilitiesForRoleKey(role))
+      ).toBe(true);
       expect(getMockNotificationsV2(role).notifications.length).toBeGreaterThan(0);
     }
   });
@@ -27,7 +29,9 @@ describe('Notifications Center V2 foundation', () => {
   it('shows notifications navigation to every active V2 role', () => {
     for (const role of ['owner', 'admin', 'teacher', 'assistant', 'student', 'guardian', 'support'] as const) expect(navIds(role)).toContain('notifications');
   });
-  it('uses role-scoped navigation rather than substitute capabilities', () => {
+  it('requires the explicit capability instead of academic substitutes', () => {
+    expect(canAccessNotificationsV2('teacher', { canGrade: true })).toBe(false);
+    expect(canAccessNotificationsV2('student', { canSubmit: true })).toBe(false);
     expect(navGroupsForCapabilities({ canViewReports: true }).flatMap((group) => group.items).map((item) => item.id)).not.toContain('notifications');
     expect(navGroupsForCapabilities({ canGrade: true }).flatMap((group) => group.items).map((item) => item.id)).not.toContain('notifications');
     expect(navGroupsForCapabilities({ canSubmit: true }).flatMap((group) => group.items).map((item) => item.id)).not.toContain('notifications');

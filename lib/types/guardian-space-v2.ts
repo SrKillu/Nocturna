@@ -68,5 +68,5 @@ export function canAccessGuardianSpaceV2(
   roleKey: RoleKey,
   capabilities: Capabilities
 ): boolean {
-  return roleKey === 'guardian' && capabilities.canViewReports === true;
+  return roleKey === 'guardian' && capabilities.canViewLinkedStudents === true;
 }

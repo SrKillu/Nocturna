@@ -39,13 +39,13 @@ describe('Library V2 foundation', () => {
     );
   });
 
-  it('requires canManageMaterials and an allowed role', () => {
+  it('requires canAccessLibrary and an allowed role', () => {
     expect(canAccessLibraryV2('owner', ROLE_CAPABILITIES.owner)).toBe(true);
     expect(canAccessLibraryV2('teacher', ROLE_CAPABILITIES.teacher)).toBe(true);
 
     const studentWithMaterials: Capabilities = {
       ...ROLE_CAPABILITIES.student,
-      canManageMaterials: true,
+      canAccessLibrary: true,
     };
     expect(canAccessLibraryV2('student', studentWithMaterials)).toBe(false);
   });
@@ -56,7 +56,8 @@ describe('Library V2 foundation', () => {
       canSubmit: true,
       canViewReports: true,
       canGrade: true,
-      canManageMaterials: false,
+      canManageMaterials: true,
+      canAccessLibrary: false,
     };
 
     expect(canAccessLibraryV2('teacher', substitutes)).toBe(false);
