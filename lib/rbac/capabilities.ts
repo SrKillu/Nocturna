@@ -5,6 +5,7 @@ export type CapabilitySet = Readonly<Record<CapabilityKey, boolean>>;
 
 export const CAPABILITY_KEYS = [
   'canManageInstitution',
+  'canViewInstitutionSettings',
   'canManageUsers',
   'canManageCourses',
   'canManageSections',
@@ -27,6 +28,7 @@ function buildCapabilities(enabled: readonly CapabilityKey[]): CapabilitySet {
 export const ROLE_CAPABILITIES: Readonly<Record<RoleKey, CapabilitySet>> = {
   owner: buildCapabilities(CAPABILITY_KEYS),
   admin: buildCapabilities([
+    'canViewInstitutionSettings',
     'canManageUsers',
     'canManageCourses',
     'canManageSections',

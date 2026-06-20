@@ -18,6 +18,7 @@ export type InstitutionStatus = 'active' | 'trial' | 'suspended' | 'archived';
 
 export type CapabilityKey =
   | 'canManageInstitution'
+  | 'canViewInstitutionSettings'
   | 'canManageUsers'
   | 'canManageCourses'
   | 'canManageSections'
