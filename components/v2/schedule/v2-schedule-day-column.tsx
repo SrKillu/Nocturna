@@ -1,0 +1,2 @@
+import { V2ScheduleSessionCard } from './v2-schedule-session-card'; import type { ScheduleV2Session } from '@/lib/types/schedule-v2';
+export function V2ScheduleDayColumn({label,sessions}:{label:string;sessions:readonly ScheduleV2Session[]}){return <section><h2 className="mb-2 text-sm font-semibold">{label}</h2><div className="space-y-2">{sessions.length?sessions.map((s)=><V2ScheduleSessionCard key={s.id} session={s}/>):<p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Sin sesiones</p>}</div></section>}
