@@ -1,0 +1,9 @@
+import { V2EnrollmentRiskBadge } from '@/components/v2/enrollments/v2-enrollment-risk-badge';
+import { V2EnrollmentStatusBadge } from '@/components/v2/enrollments/v2-enrollment-status-badge';
+import { V2EnrollmentTypeBadge } from '@/components/v2/enrollments/v2-enrollment-type-badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { EnrollmentV2ListItem } from '@/lib/types/enrollments-v2';
+
+export function V2EnrollmentsTable({ enrollments }: { enrollments: readonly EnrollmentV2ListItem[] }) {
+  return <div className="hidden overflow-hidden rounded-md border bg-card xl:block"><Table><TableHeader><TableRow className="bg-muted/30 hover:bg-muted/30"><TableHead className="px-4">Estudiante</TableHead><TableHead>Curso / sección</TableHead><TableHead>Período</TableHead><TableHead>Estado</TableHead><TableHead>Tipo</TableHead><TableHead>Cupo / grupo</TableHead><TableHead>Seguimiento</TableHead><TableHead className="pr-4">Próxima acción</TableHead></TableRow></TableHeader><TableBody>{enrollments.map((item) => <TableRow key={item.id}><TableCell className="px-4 py-3"><p className="font-medium">{item.studentLabel}</p><p className="font-mono text-xs text-muted-foreground">{item.studentCode}</p></TableCell><TableCell>{item.courseLabel} · {item.sectionLabel}</TableCell><TableCell className="text-sm text-muted-foreground">{item.periodLabel}</TableCell><TableCell><V2EnrollmentStatusBadge status={item.status} /></TableCell><TableCell><V2EnrollmentTypeBadge type={item.type} /></TableCell><TableCell>{item.capacityLabel}</TableCell><TableCell><V2EnrollmentRiskBadge risk={item.risk} /><p className="mt-1 text-xs text-muted-foreground">{item.riskLabel}</p></TableCell><TableCell className="pr-4 text-sm text-muted-foreground">{item.nextAction}</TableCell></TableRow>)}</TableBody></Table></div>;
+}
