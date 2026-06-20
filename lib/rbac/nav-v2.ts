@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Library,
   ScrollText,
+  UserCog,
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
@@ -65,6 +66,17 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     group: 'Académico',
     requiredCapabilities: ['canManageCourses', 'canGrade'],
     capabilityMode: 'any',
+    availability: 'active',
+  },
+  {
+    id: 'staff',
+    label: 'Personal',
+    href: '/v2/staff',
+    icon: UserCog,
+    group: 'Académico',
+    requiredCapabilities: ['canManageUsers'],
+    requiredRoles: ['owner', 'admin'],
+    capabilityMode: 'all',
     availability: 'active',
   },
   {
