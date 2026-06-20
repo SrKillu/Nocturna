@@ -1,0 +1,2 @@
+import { Skeleton } from '@/components/ui/skeleton';
+export default function ScheduleV2Loading(){return <div className="space-y-5" aria-label="Cargando horarios"><Skeleton className="h-12 w-72"/><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({length:4}).map((_,i)=><Skeleton key={i} className="h-28"/>)}</div><Skeleton className="h-16"/><Skeleton className="h-96"/><div className="grid gap-5 lg:grid-cols-2"><Skeleton className="h-52"/><Skeleton className="h-52"/></div></div>}
