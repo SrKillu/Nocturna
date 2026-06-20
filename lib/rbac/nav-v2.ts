@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   BookOpenCheck,
   CalendarCheck,
   ChartNoAxesColumnIncreasing,
@@ -92,6 +93,17 @@ const NAV_ITEMS_V2: readonly V2NavItem[] = [
     icon: ChartNoAxesColumnIncreasing,
     group: 'Académico',
     requiredCapabilities: ['canGrade'],
+    capabilityMode: 'all',
+    availability: 'active',
+  },
+  {
+    id: 'reports',
+    label: 'Reportes',
+    href: '/v2/reports',
+    icon: BarChart3,
+    group: 'Académico',
+    requiredCapabilities: ['canViewReports'],
+    requiredRoles: ['owner', 'admin', 'teacher', 'assistant'],
     capabilityMode: 'all',
     availability: 'active',
   },

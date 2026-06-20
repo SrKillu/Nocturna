@@ -46,6 +46,7 @@ export const ROLE_CAPABILITIES: Readonly<Record<RoleKey, CapabilitySet>> = {
   ]),
   assistant: buildCapabilities([
     'canGrade',
+    'canViewReports',
     'canManageMaterials',
     'canUseChat',
     'canManageAttendance',
