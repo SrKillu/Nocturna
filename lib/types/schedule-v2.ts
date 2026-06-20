@@ -27,11 +27,11 @@ export interface ScheduleV2ConflictItem { id: string; title: string; detail: str
 export interface ScheduleV2Fixture { summary: ScheduleV2Summary; sessions: readonly ScheduleV2Session[]; conflicts: readonly ScheduleV2ConflictItem[]; upcoming: readonly ScheduleV2Session[]; disclaimer: string; }
 export interface ScheduleV2FilterState { query: string; courseId: string | 'all'; section: string | 'all'; teacher: string | 'all'; room: string | 'all'; day: ScheduleV2Day | 'all'; status: ScheduleV2Status | 'all'; }
 
-export const SCHEDULE_V2_CAPABILITIES = ['canManageAttendance'] as const satisfies readonly CapabilityKey[];
+export const SCHEDULE_V2_CAPABILITIES = ['canViewSchedule'] as const satisfies readonly CapabilityKey[];
 export const SCHEDULE_V2_ROLES = ['owner', 'admin', 'teacher', 'assistant'] as const satisfies readonly RoleKey[];
 
 export function canAccessScheduleV2(roleKey: RoleKey, capabilities: Capabilities): boolean {
-  return SCHEDULE_V2_ROLES.includes(roleKey as (typeof SCHEDULE_V2_ROLES)[number]) && capabilities.canManageAttendance === true;
+  return SCHEDULE_V2_ROLES.includes(roleKey as (typeof SCHEDULE_V2_ROLES)[number]) && capabilities.canViewSchedule === true;
 }
 export function scheduleAudienceForRole(roleKey: RoleKey): ScheduleV2Audience | null {
   if (roleKey === 'owner' || roleKey === 'admin') return 'institution';

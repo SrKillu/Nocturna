@@ -6,6 +6,11 @@ export type CapabilitySet = Readonly<Record<CapabilityKey, boolean>>;
 export const CAPABILITY_KEYS = [
   'canManageInstitution',
   'canViewInstitutionSettings',
+  'canViewAuditLog',
+  'canViewSchedule',
+  'canAccessLibrary',
+  'canViewLinkedStudents',
+  'canViewNotifications',
   'canManageUsers',
   'canManageCourses',
   'canManageSections',
@@ -26,9 +31,17 @@ function buildCapabilities(enabled: readonly CapabilityKey[]): CapabilitySet {
 }
 
 export const ROLE_CAPABILITIES: Readonly<Record<RoleKey, CapabilitySet>> = {
-  owner: buildCapabilities(CAPABILITY_KEYS),
+  owner: buildCapabilities(
+    CAPABILITY_KEYS.filter(
+      (capability) => capability !== 'canViewLinkedStudents'
+    )
+  ),
   admin: buildCapabilities([
     'canViewInstitutionSettings',
+    'canViewAuditLog',
+    'canViewSchedule',
+    'canAccessLibrary',
+    'canViewNotifications',
     'canManageUsers',
     'canManageCourses',
     'canManageSections',
@@ -40,6 +53,9 @@ export const ROLE_CAPABILITIES: Readonly<Record<RoleKey, CapabilitySet>> = {
     'canManageCertificates',
   ]),
   teacher: buildCapabilities([
+    'canViewSchedule',
+    'canAccessLibrary',
+    'canViewNotifications',
     'canGrade',
     'canViewReports',
     'canManageMaterials',
@@ -47,15 +63,31 @@ export const ROLE_CAPABILITIES: Readonly<Record<RoleKey, CapabilitySet>> = {
     'canManageAttendance',
   ]),
   assistant: buildCapabilities([
+    'canViewSchedule',
+    'canAccessLibrary',
+    'canViewNotifications',
     'canGrade',
     'canViewReports',
     'canManageMaterials',
     'canUseChat',
     'canManageAttendance',
   ]),
-  student: buildCapabilities(['canSubmit', 'canUseChat']),
-  guardian: buildCapabilities(['canViewReports', 'canUseChat']),
-  support: buildCapabilities(['canViewReports', 'canUseChat']),
+  student: buildCapabilities([
+    'canViewNotifications',
+    'canSubmit',
+    'canUseChat',
+  ]),
+  guardian: buildCapabilities([
+    'canViewLinkedStudents',
+    'canViewNotifications',
+    'canViewReports',
+    'canUseChat',
+  ]),
+  support: buildCapabilities([
+    'canViewNotifications',
+    'canViewReports',
+    'canUseChat',
+  ]),
 };
 
 /**

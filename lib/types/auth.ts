@@ -19,6 +19,11 @@ export type InstitutionStatus = 'active' | 'trial' | 'suspended' | 'archived';
 export type CapabilityKey =
   | 'canManageInstitution'
   | 'canViewInstitutionSettings'
+  | 'canViewAuditLog'
+  | 'canViewSchedule'
+  | 'canAccessLibrary'
+  | 'canViewLinkedStudents'
+  | 'canViewNotifications'
   | 'canManageUsers'
   | 'canManageCourses'
   | 'canManageSections'

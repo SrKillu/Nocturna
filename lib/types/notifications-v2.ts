@@ -1,4 +1,4 @@
-import type { RoleKey } from '@/lib/types/auth';
+import type { Capabilities, RoleKey } from '@/lib/types/auth';
 
 export type NotificationV2Module =
   | 'system'
@@ -101,8 +101,14 @@ export const NOTIFICATIONS_V2_ROLES: readonly RoleKey[] = [
   'support',
 ];
 
-export function canAccessNotificationsV2(roleKey: RoleKey): boolean {
-  return NOTIFICATIONS_V2_ROLES.includes(roleKey);
+export function canAccessNotificationsV2(
+  roleKey: RoleKey,
+  capabilities: Capabilities
+): boolean {
+  return (
+    NOTIFICATIONS_V2_ROLES.includes(roleKey) &&
+    capabilities.canViewNotifications === true
+  );
 }
 
 export function filterNotificationsV2(

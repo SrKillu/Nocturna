@@ -79,7 +79,7 @@ export function canAccessAuditLogV2(
 ): boolean {
   return (
     AUDIT_LOG_V2_ROLES.includes(roleKey) &&
-    capabilities.canViewInstitutionSettings === true
+    capabilities.canViewAuditLog === true
   );
 }
 

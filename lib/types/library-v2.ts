@@ -74,7 +74,7 @@ export function canAccessLibraryV2(
 ): boolean {
   return (
     LIBRARY_V2_ROLES.includes(roleKey) &&
-    capabilities.canManageMaterials === true
+    capabilities.canAccessLibrary === true
   );
 }
 

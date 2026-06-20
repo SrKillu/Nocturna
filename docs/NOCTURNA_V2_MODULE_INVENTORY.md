@@ -32,7 +32,7 @@ The next safe milestone is not broad database implementation. It is to stabilize
 | Students | `/v2/students` | Visual mock | Owner, admin, teacher, assistant | Any of `canManageCourses`, `canGrade` | Student directory, filters, summary, desktop/mobile views | `students-v2` types/mocks/tests | No dedicated student-view capability | Add view/manage distinction and institution scoping |
 | Student profile | `/v2/students/[studentId]` | Visual mock | Owner, admin, teacher, assistant | Same as students | Profile header, academic summary, attendance, guardians and state panels; loading/not-found | Shared `students-v2` types/mocks/tests | Sensitive student data requires field-level policy decisions | Define authorized profile projection by role |
 | Student self view | `/v2/my-space` | Visual mock | Student | `canSubmit`, while excluding managerial capabilities | Student summary, courses, tasks, performance and state panels | `my-space-v2` types/mocks/tests | Capability inference is indirect | Add an explicit student-space access contract |
-| Guardian space | `/v2/guardian-space` | Visual mock | Guardian | Temporary: `canViewReports` plus guardian role | Linked-student summary, progress, attendance, notices and state panels | `guardian-space-v2` types/mocks/tests | Report permission is a semantic substitute; relationship authorization is absent | Add linked-student capability and guardian RLS design |
+| Guardian space | `/v2/guardian-space` | Visual mock | Guardian | `canViewLinkedStudents` plus guardian role | Linked-student summary, progress, attendance, notices and state panels | `guardian-space-v2` types/mocks/tests | Relationship authorization and linked-student RLS are absent | Define guardian relationship and field-level RLS |
 | Attendance | `/v2/attendance` | Visual mock | Owner, admin, teacher, assistant | `canManageAttendance` | Session summary, roster, filters, status controls and states | `attendance-v2` types/mocks/tests | Read and write authority are combined | Separate view/record/correct permissions and define audit rules |
 | Evaluations | `/v2/evaluations` | Visual mock | Owner, admin, teacher, assistant | `canGrade` | Evaluation list, filters, status and summary components | `evaluations-v2` types/mocks/tests | Evaluation design and grade entry share one permission | Define assessment lifecycle and grading permissions |
 | Materials | `/v2/materials` | Visual mock | Owner, admin, teacher, assistant | `canManageMaterials` | Material library, filters, cards/table and states | `materials-v2` types/mocks/tests | No Storage integration or upload policy | Design metadata, Storage paths, quotas, and signed access |
@@ -41,11 +41,11 @@ The next safe milestone is not broad database implementation. It is to stabilize
 | Certificates | `/v2/certificates` | Visual mock | Owner, admin | `canManageCertificates` | Certificate list, filters, issuance summaries and states | `certificates-v2` types/mocks/tests | No official-document lifecycle, signing, or verification | Define templates, issuance, revocation, and public verification |
 | Staff | `/v2/staff` | Visual mock | Owner, admin | `canManageUsers` | Staff directory, summaries, filters and state components | `staff-v2` types/mocks/tests | User management and staff viewing are conflated | Separate directory viewing from identity/role administration |
 | Enrollments | `/v2/enrollments` | Visual mock | Owner, admin | `canManageCourses` plus explicit role restriction | Enrollment queue, filters, summaries and states | `enrollments-v2` types/mocks/tests | No enrollment lifecycle or concurrency rules | Define application, enrollment, withdrawal, and transfer states |
-| Schedule | `/v2/schedule` | Visual mock | Owner, admin, teacher, assistant | Temporary: `canManageAttendance` | Calendar/list views, filters, event cards and states | `schedule-v2` types/mocks/tests | Attendance permission is a semantic substitute | Add schedule view/manage capabilities and conflict rules |
-| Library | `/v2/library` | Visual mock | Owner, admin, teacher, assistant | Temporary: `canManageMaterials` | Catalog, circulation summaries, filters and states | `library-v2` types/mocks/tests | Materials permission does not express circulation authority | Add library access/manage capabilities and loan lifecycle |
+| Schedule | `/v2/schedule` | Visual mock | Owner, admin, teacher, assistant | `canViewSchedule` | Calendar/list views, filters, event cards and states | `schedule-v2` types/mocks/tests | Read access is explicit; schedule management remains undefined | Add schedule management capability and conflict rules |
+| Library | `/v2/library` | Visual mock | Owner, admin, teacher, assistant | `canAccessLibrary` | Catalog, circulation summaries, filters and states | `library-v2` types/mocks/tests | Read access is explicit; circulation authority remains undefined | Add library management capability and loan lifecycle |
 | Institution settings | `/v2/settings` | Visual mock | Owner, admin | `canViewInstitutionSettings` plus explicit role restriction | Settings sections, institution profile, preferences, integrations and states | `settings-v2` types/mocks/tests | Read-only visual contract; no persistence or separate write capability | Design read/write settings capabilities and configuration schema |
-| Audit log | `/v2/audit-log` | Visual mock | Owner, admin | Temporary: `canViewInstitutionSettings` plus explicit role restriction | Audit list, event details, filters, summaries and states | `audit-log-v2` types/mocks/tests | Settings visibility is not audit authorization | Add dedicated audit capability, retention, and redaction policy |
-| Notifications | `/v2/notifications` | Visual mock | All roles | Explicit role allow-list; no module capability | Inbox, filters, summaries, preferences and state components | `notifications-v2` types/mocks/tests | Delivery, read state, and preferences are local only | Define notification events, channels, preferences, and delivery tracking |
+| Audit log | `/v2/audit-log` | Visual mock | Owner, admin | `canViewAuditLog` plus explicit role restriction | Audit list, event details, filters, summaries and states | `audit-log-v2` types/mocks/tests | Retention, redaction, and immutable event storage remain undefined | Define audit persistence and privacy policy |
+| Notifications | `/v2/notifications` | Visual mock | All roles | `canViewNotifications` plus explicit role allow-list | Inbox, filters, summaries, preferences and state components | `notifications-v2` types/mocks/tests | Delivery, read state, and preferences are local only | Define notification events, channels, preferences, and delivery tracking |
 
 ## Authentication and authorization infrastructure
 
@@ -78,6 +78,11 @@ The matrix reflects the current navigation and route contracts, not a proposed f
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | `canManageInstitution` | Yes | No | No | No | No | No | No |
 | `canViewInstitutionSettings` | Yes | Yes | No | No | No | No | No |
+| `canViewAuditLog` | Yes | Yes | No | No | No | No | No |
+| `canViewSchedule` | Yes | Yes | Yes | Yes | No | No | No |
+| `canAccessLibrary` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewLinkedStudents` | No | No | No | No | No | Yes | No |
+| `canViewNotifications` | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | `canManageUsers` | Yes | Yes | No | No | No | No | No |
 | `canManageCourses` | Yes | Yes | No | No | No | No | No |
 | `canManageSections` | Yes | Yes | No | No | No | No | No |
@@ -94,44 +99,48 @@ The matrix reflects the current navigation and route contracts, not a proposed f
 | Module | Current capability gate | Effective roles | Contract quality |
 |---|---|---|---|
 | Dashboard | Authenticated active membership | All | Acceptable baseline |
-| Notifications | Explicit role allow-list | All | Role-only; capability may be useful later |
+| Notifications | `canViewNotifications` and explicit role allow-list | All | Purpose-specific read capability |
 | Settings | `canViewInstitutionSettings` and owner/admin | Owner, admin | Purpose-specific read capability |
-| Audit log | `canViewInstitutionSettings` and owner/admin | Owner, admin | Temporary substitute |
+| Audit log | `canViewAuditLog` and owner/admin | Owner, admin | Purpose-specific read capability |
 | Courses/workspace | Any of `canManageCourses`, `canGrade`, `canSubmit` | Owner, admin, teacher, assistant, student | Overloaded view/manage contract |
 | Students/profile | Any of `canManageCourses`, `canGrade` | Owner, admin, teacher, assistant | Overloaded and indirect |
 | Enrollments | `canManageCourses` and owner/admin | Owner, admin | Indirect |
 | Staff | `canManageUsers` and owner/admin | Owner, admin | Management-heavy for read access |
 | Attendance | `canManageAttendance` | Owner, admin, teacher, assistant | Read/write combined |
-| Schedule | `canManageAttendance` | Owner, admin, teacher, assistant | Temporary substitute |
+| Schedule | `canViewSchedule` | Owner, admin, teacher, assistant | Purpose-specific read capability |
 | Evaluations | `canGrade` | Owner, admin, teacher, assistant | Reasonable but broad |
 | Gradebook | `canGrade` | Owner, admin, teacher, assistant | Read/write combined |
 | Reports | `canViewReports` and staff-like role | Owner, admin, teacher, assistant | Purpose-specific but role-limited |
 | Certificates | `canManageCertificates` and owner/admin | Owner, admin | Read/write combined |
 | Materials | `canManageMaterials` | Owner, admin, teacher, assistant | Read/write combined |
-| Library | `canManageMaterials` | Owner, admin, teacher, assistant | Temporary substitute |
+| Library | `canAccessLibrary` | Owner, admin, teacher, assistant | Purpose-specific access capability |
 | My space | `canSubmit` plus exclusion of managerial capabilities | Student | Indirect role inference |
-| Guardian space | `canViewReports` and guardian role | Guardian | Temporary substitute |
+| Guardian space | `canViewLinkedStudents` and guardian role | Guardian | Purpose-specific relationship capability |
 
-## Temporary capability substitutions
+## Capability cleanup status
 
-These gates are safe enough for the visual foundation but should not become the permanent authorization model:
+C24 replaced the first wave of temporary visual-foundation capability substitutions with explicit route-purpose capabilities. Read/write capability separation remains pending for future data integration.
 
-- Audit log uses `canViewInstitutionSettings`.
-- Schedule uses `canManageAttendance`.
-- Library uses `canManageMaterials`.
-- Guardian space uses `canViewReports`.
+Completed in C24:
+
+- Audit log uses `canViewAuditLog`.
+- Schedule uses `canViewSchedule`.
+- Library uses `canAccessLibrary`.
+- Guardian space uses `canViewLinkedStudents`.
+- Notifications uses `canViewNotifications`.
+
+Still pending:
+
 - Student and course directories infer read access from management, grading, or submission capabilities.
-- Notifications use a universal role allow-list rather than an explicit capability.
+- Attendance, gradebook, certificates, staff, enrollments, settings, schedule, and library still need read/write or view/manage separation before real data integration.
 
 ## Recommended future capabilities
 
 Prioritize smaller read/write distinctions instead of granting broader management rights:
 
-- `canViewAuditLog`
-- `canViewSchedule` and `canManageSchedule`
-- `canAccessLibrary` and `canManageLibrary`
-- `canViewLinkedStudents`
-- `canViewNotifications` and `canManageNotifications`
+- `canManageSchedule`
+- `canManageLibrary`
+- `canManageNotifications`
 - `canViewStudents` and `canManageStudents`
 - `canViewCourses`
 - `canViewAttendance` and `canRecordAttendance`
@@ -148,7 +157,7 @@ Prioritize smaller read/write distinctions instead of granting broader managemen
 - Eighteen domain unit suites validate mock selectors, filters, state helpers, and access-related behavior.
 - Capability tests verify the role matrix; auth and middleware tests cover the V2 session boundary.
 - Dynamic course and student routes include loading and safe not-found states.
-- Current repository baseline after C22: 23 unit test files and 173 passing tests.
+- Current repository baseline after C24: 24 unit test files and 176 passing tests.
 - Component foundations exist for desktop/mobile lists, filters, summaries, detail panels, and controlled empty, denied, error, loading, and problem states.
 
 ## Cross-cutting risks

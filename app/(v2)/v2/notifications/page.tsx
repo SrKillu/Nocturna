@@ -37,7 +37,12 @@ export default async function NotificationsV2Page() {
     return <V2ProblemState code="INSTITUTION_UNAVAILABLE" />;
   }
 
-  if (!canAccessNotificationsV2(session.activeMembership.roleKey)) {
+  if (
+    !canAccessNotificationsV2(
+      session.activeMembership.roleKey,
+      session.activeMembership.capabilities
+    )
+  ) {
     return (
       <V2AccessDeniedState
         institutionName={activeMembership.institutionName}
