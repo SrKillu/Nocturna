@@ -1,0 +1,9 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { V2NotificationChannelBadge } from '@/components/v2/notifications/v2-notification-channel-badge';
+import { V2NotificationPriorityBadge } from '@/components/v2/notifications/v2-notification-priority-badge';
+import { V2NotificationStatusBadge } from '@/components/v2/notifications/v2-notification-status-badge';
+import type { NotificationV2Item } from '@/lib/types/notifications-v2';
+
+export function V2NotificationsTable({ notifications }: { notifications: readonly NotificationV2Item[] }) {
+  return <div className="hidden overflow-hidden rounded-md border bg-card lg:block"><Table><TableHeader><TableRow className="bg-muted/30 hover:bg-muted/30"><TableHead className="px-4">Notificación</TableHead><TableHead>Módulo</TableHead><TableHead>Tipo</TableHead><TableHead>Prioridad</TableHead><TableHead>Estado</TableHead><TableHead>Canal</TableHead><TableHead>Fecha / hora</TableHead><TableHead className="pr-4">Próxima acción</TableHead></TableRow></TableHeader><TableBody>{notifications.map((notification) => <TableRow key={notification.id}><TableCell className="px-4 py-3"><p className="font-medium">{notification.title}</p><p className="mt-1 max-w-xs text-xs text-muted-foreground">{notification.detail}</p></TableCell><TableCell>{notification.moduleLabel}</TableCell><TableCell className="capitalize">{notification.type}</TableCell><TableCell><V2NotificationPriorityBadge priority={notification.priority} /></TableCell><TableCell><V2NotificationStatusBadge status={notification.status} /></TableCell><TableCell><V2NotificationChannelBadge channel={notification.channel} /></TableCell><TableCell className="text-sm text-muted-foreground">{notification.occurredAtLabel}</TableCell><TableCell className="pr-4 text-sm text-muted-foreground">{notification.nextAction}</TableCell></TableRow>)}</TableBody></Table></div>;
+}
