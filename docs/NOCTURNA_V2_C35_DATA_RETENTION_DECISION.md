@@ -76,3 +76,18 @@ Until the owner answers the ten questions:
 
 Immediate recommendation:
 `C35_RECOMMEND_DATA_RETENTION_AUDIT`
+
+## C36 Data Retention Audit Follow-up
+
+C36 created a Level 0 documentary audit, owner questionnaire, domain
+classification matrix, scenario tree and safe future audit plan.
+
+- Owner input is still required.
+- No rows, counts, samples or exports were accessed.
+- No migration or database change was performed.
+- Legacy retirement remains prohibited.
+- Clean V2 architecture may proceed only with synthetic data and a retention
+  gate.
+
+Current status:
+`C36_RETENTION_AUDIT_DRAFTED_OWNER_INPUT_REQUIRED`

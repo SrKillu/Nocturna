@@ -77,3 +77,14 @@ STATUS: PENDING_REVIEW
 - V1 profile/JWT claims remain a temporary compatibility bridge, never final
   V2 authority.
 - Feature flags must allow adapters to be disabled without changing the UI.
+
+## C36 Data retention impact
+
+- UI remains mock-backed.
+- Real adapters wait for retention and cutover decisions.
+- Clean V2 staging must not display or copy legacy data without approval.
+- Synthetic fixtures must not reuse real names, emails, IDs or files.
+- No browser code may use `service_role`.
+- Legacy data must not become V2 authority by convenience.
+- Any future row-level audit, export or migration requires a separately approved
+  scope.

@@ -199,3 +199,14 @@ Next gate: baseline reconciliation plus disposable-database RLS tests.
 
 Recommended posture: clean V2 staging plus synthetic policy tests, with no
 production cutover until retention and migration scope are approved.
+
+## C36 Data Retention Note
+
+- No module is ready for real legacy data.
+- Retention and ownership of current records remain unknown.
+- Clean staging must use synthetic institutions, users, memberships and
+  academic records.
+- Real adapters remain blocked until retention/cutover decisions and DB
+  authority tests are approved.
+- Policy tests must not depend on copied production records.
+- Any future aggregate or sample audit requires separate explicit approval.
