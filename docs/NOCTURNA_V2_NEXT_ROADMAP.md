@@ -304,3 +304,19 @@ No `db push`, project creation, migration application or production action is
 authorized.
 
 `C35_RECOMMEND_HYBRID_CLEAN_STAGING_THEN_MIGRATE`
+
+## C36 Data Retention Audit
+
+C36 documented every potential legacy data domain, the required owner
+classifications, four retention scenarios and a graduated future audit model.
+
+- Current data criticality remains unknown because no rows were read.
+- Clean staging architecture can be designed with synthetic data.
+- No real data may be copied into staging.
+- No cutover, export, deletion or legacy retirement may occur without owner
+  classification and explicit approval.
+
+Recommended next batch:
+C37 Clean Supabase V2 Architecture Draft with a legacy-retention gate.
+
+`C36_RECOMMEND_C37_CLEAN_SUPABASE_V2_ARCHITECTURE_DRAFT_WITH_LEGACY_RETENTION_GATE`
