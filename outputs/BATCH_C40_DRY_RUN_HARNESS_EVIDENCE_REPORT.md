@@ -114,13 +114,26 @@ C41 itself must remain planning-only.
 
 ## Publication
 
-- Commit: pending.
-- Push: pending.
-- PR: pending.
-- GitHub checks: pending.
+- Evidence commit: `267089f036e3bd99f1f66c37b7f4d3074978d742`.
+- Push: completed to
+  `origin/feature/nocturna-c40-dry-run-harness-evidence`.
+- PR: https://github.com/SrKillu/Nocturna/pull/43
+- PR state: OPEN; base `main`; head C40 branch; MERGEABLE.
+- `PR Checks / validate`: PASS.
+- `Nocturna Guardrails / protected-paths`: FAIL.
+
+The guardrail failure is caused only by its unconditional `outputs/*` rule. C40
+explicitly requires the report plus three redacted evidence files to be
+versioned, so four authorized files trigger that rule. No protected secret,
+runtime, migration, package or production path is present.
+
+Human decision required before merge: approve a scoped exception/process for
+these C40 evidence files, or explicitly authorize a revised evidence location.
+C40 does not change the guardrail itself.
 
 ## Verdicts
 
+- `C40_PUSHED_PR_CREATED`
 - `C40_DRY_RUN_EVIDENCE_CAPTURED`
 - `C40_PREFLIGHT_EXECUTED_DRY_RUN_ONLY`
 - `C40_RUNNER_EXECUTED_DRY_RUN_ONLY`
