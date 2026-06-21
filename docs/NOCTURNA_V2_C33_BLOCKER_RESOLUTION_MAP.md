@@ -70,3 +70,30 @@ STATUS: PENDING_REVIEW
 **C34 decision:** `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
 
 **Next:** `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.
+
+## C35 Blocker Status Update
+
+### Reduced
+
+- Remote public baseline is inventoried by object class.
+- Remote/local differences are mapped by table, helper, RLS and grant area.
+- Remote-only objects are explicitly identified.
+- Auth V2 forward work is separated from baseline reconstruction.
+- Major operational/security risks have owners and mitigations.
+
+### Still blocking
+
+- The baseline draft has not been executed in a disposable database.
+- Exact trigger/function reconstruction is not proven.
+- RLS and grant behavior has not been tested by actor.
+- No backfill has been simulated.
+- No executable migration is approved.
+- Auth V2 DB authority remains absent.
+
+### Decision
+
+- Baseline documentation: complete for review.
+- Migration readiness: no.
+- Next batch: C36 disposable DB reconstruction and validation.
+
+`C35_READY_FOR_DISPOSABLE_DB_RECONSTRUCTION`

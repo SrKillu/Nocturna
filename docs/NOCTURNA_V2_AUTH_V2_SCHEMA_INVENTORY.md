@@ -116,3 +116,24 @@ The remote uses the V1 `user_role` enum and access-token hook. It does not
 contain the database authority required by Auth V2.
 
 **C34 verdict:** `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
+
+## C35 Auth V2 Baseline Dependency Update
+
+C35 confirms that the missing Auth V2 objects are not a snapshot parsing issue:
+the observed baseline contains no `roles`, `institution_memberships`,
+`membership_session_selections` or `institutions.status`.
+
+The forward migration plan is deliberately separate from the baseline. It
+defines additive phases for roles/memberships/status, non-destructive V1
+backfill, session selection, DB-derived context and academic dependencies.
+
+Pending before SQL approval:
+
+- deterministic disposable reconstruction;
+- role/status vocabulary decisions;
+- backfill mapping, especially `super_admin`;
+- RLS/grant tests;
+- V1 regression tests;
+- recovery/forward-fix rehearsal.
+
+`C35_AUTH_V2_FORWARD_PLAN_DRAFTED_NOT_APPROVED_FOR_SQL`
