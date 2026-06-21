@@ -27,52 +27,73 @@ function expectCapabilityMatrix(
   }
 }
 
+const INSTITUTION_ADMINS: readonly RoleKey[] = ['owner', 'admin'];
+const ACADEMIC_STAFF: readonly RoleKey[] = [
+  'owner',
+  'admin',
+  'teacher',
+  'assistant',
+];
+const COURSE_READERS: readonly RoleKey[] = [...ACADEMIC_STAFF, 'student'];
+
 describe('V2 capability matrix', () => {
-  it('registers the explicit route-purpose capabilities', () => {
+  it('registers every safe read capability', () => {
     expect(CAPABILITY_KEYS).toEqual(
       expect.arrayContaining([
-        'canViewAuditLog',
-        'canViewSchedule',
-        'canAccessLibrary',
-        'canViewLinkedStudents',
-        'canViewNotifications',
+        'canViewCourses',
+        'canViewSections',
+        'canViewStudents',
+        'canViewStudentProfiles',
+        'canViewOwnStudentProfile',
+        'canViewEnrollments',
+        'canViewAttendance',
+        'canViewEvaluations',
+        'canViewGradebook',
+        'canViewOwnGrades',
+        'canViewLinkedStudentGrades',
+        'canViewMaterials',
+        'canViewCertificates',
+        'canViewStaff',
       ])
     );
   });
 
-  it('grants each route-purpose capability to the approved roles only', () => {
-    expectCapabilityMatrix('canViewAuditLog', ['owner', 'admin']);
-    expectCapabilityMatrix('canViewSchedule', [
-      'owner',
-      'admin',
-      'teacher',
-      'assistant',
-    ]);
-    expectCapabilityMatrix('canAccessLibrary', [
-      'owner',
-      'admin',
-      'teacher',
-      'assistant',
-    ]);
+  it('grants institutional read capabilities to the approved roles only', () => {
+    expectCapabilityMatrix('canViewCourses', COURSE_READERS);
+    expectCapabilityMatrix('canViewSections', COURSE_READERS);
+    expectCapabilityMatrix('canViewStudents', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canViewStudentProfiles', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canViewEnrollments', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canViewAttendance', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canViewEvaluations', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canViewGradebook', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canViewMaterials', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canViewCertificates', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canViewStaff', INSTITUTION_ADMINS);
+  });
+
+  it('keeps personal and relationship-derived reads narrowly scoped', () => {
+    expectCapabilityMatrix('canViewOwnStudentProfile', ['student']);
+    expectCapabilityMatrix('canViewOwnGrades', ['student']);
+    expectCapabilityMatrix('canViewLinkedStudentGrades', ['guardian']);
+  });
+
+  it('keeps the C24 route-purpose capability assignments unchanged', () => {
+    expectCapabilityMatrix('canViewAuditLog', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canViewSchedule', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canAccessLibrary', ACADEMIC_STAFF);
     expectCapabilityMatrix('canViewLinkedStudents', ['guardian']);
     expectCapabilityMatrix('canViewNotifications', ROLE_KEYS);
   });
 
-  it('keeps the existing capability assignments unchanged', () => {
+  it('keeps every pre-C27 capability assignment unchanged', () => {
     expectCapabilityMatrix('canManageInstitution', ['owner']);
-    expectCapabilityMatrix('canViewInstitutionSettings', ['owner', 'admin']);
-    expectCapabilityMatrix('canManageAttendance', [
-      'owner',
-      'admin',
-      'teacher',
-      'assistant',
-    ]);
-    expectCapabilityMatrix('canManageMaterials', [
-      'owner',
-      'admin',
-      'teacher',
-      'assistant',
-    ]);
+    expectCapabilityMatrix('canViewInstitutionSettings', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canManageUsers', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canManageCourses', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canManageSections', INSTITUTION_ADMINS);
+    expectCapabilityMatrix('canGrade', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canSubmit', ['owner', 'student']);
     expectCapabilityMatrix('canViewReports', [
       'owner',
       'admin',
@@ -81,5 +102,9 @@ describe('V2 capability matrix', () => {
       'guardian',
       'support',
     ]);
+    expectCapabilityMatrix('canManageMaterials', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canUseChat', ROLE_KEYS);
+    expectCapabilityMatrix('canManageAttendance', ACADEMIC_STAFF);
+    expectCapabilityMatrix('canManageCertificates', INSTITUTION_ADMINS);
   });
 });
