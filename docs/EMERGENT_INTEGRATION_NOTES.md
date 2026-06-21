@@ -35,3 +35,18 @@ STATUS: PENDING_REVIEW
 - No `service_role` credential or RLS-bypass client may exist in browser code.
 - Direct object IDs remain server-authorized and map out-of-scope rows to safe
   not-found behavior.
+
+## C33 Auth V2 schema context
+
+- Frontend/Emergent must not treat V1 `profiles.role` or
+  `profiles.institution_id` as final V2 authority.
+- Real-data adapters must wait for `activeMembership` resolved and revalidated by
+  the server.
+- UI never generates or asserts role/capabilities.
+- The institution switcher selects an authorized membership, not an arbitrary
+  institution ID.
+- Multi-device selection belongs to the current Supabase `session_id`.
+- Future adapters must wait until roles, institution memberships and session
+  selections are versioned and policy-tested.
+- Mock-backed modules remain explicit while schema reconciliation is incomplete.
+- No client adapter may use service role or bypass RLS during the transition.

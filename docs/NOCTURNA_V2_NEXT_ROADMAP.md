@@ -99,6 +99,16 @@ Design the tenant-safe academic data foundation without applying unreviewed migr
   be a C33 schema/context fix pass that versions/reconciles Auth V2 tables and the
   V1 transition. C33 must not convert C30 directly to a migration unless those
   blockers are resolved first.
+- C33 Auth V2 schema/context fix pass completed as review-only documentation:
+  - runtime/migrations drift for roles and institution memberships confirmed
+  - target Auth V2 schema contract drafted
+  - V1→V2 non-destructive transition and backfill sequence drafted
+  - fully commented Auth context pseudo-SQL drafted
+  - blocker resolution map records remaining migration gates
+- Next step depends on explicit approval:
+  - C34 local migration draft plan after reconciling the real Auth V2 schema; or
+  - C34 remote schema drift inspection in strict read-only mode.
+- C33 does not authorize direct conversion of C30 to an applicable migration.
 - Do not convert C30 into a migration or touch remote Supabase until SQL, policies, seed, rollback and local policy-test evidence receive explicit approval.
 - No `db push`, remote SQL or migration application is permitted without separate
   explicit approval.

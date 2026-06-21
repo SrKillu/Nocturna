@@ -65,6 +65,23 @@ A module is not ready for real Supabase integration merely because its route, mo
   C32 specification rather than an unspecified placeholder.
 - No executable migration is approved and no remote Supabase change occurred.
 
+## C33 Auth V2 schema/context fix update
+
+- Auth V2 schema inventory drafted; runtime/migrations drift is confirmed.
+- Target Auth V2 contract drafted for profiles, institutions, roles,
+  institution memberships and per-session selections.
+- V1→V2 non-destructive transition plan drafted.
+- Review-only, fully commented Auth context pseudo-SQL added under
+  `docs/sql-drafts/`; it is not a migration.
+- Blocker resolution map identifies what C33 reduces and what still prevents
+  migration readiness.
+- Capabilities remain a versioned TypeScript contract temporarily; no DB
+  capability persistence is introduced.
+- Courses + Sections remains blocked on Auth context, academic relationship
+  entities, local DB tests, grants and remote drift confirmation.
+- C33 status: blockers reduced, not migration-ready.
+- No executable migration is approved and no remote Supabase change occurred.
+
 Statuses:
 
 - **Done:** present and usable for planning.

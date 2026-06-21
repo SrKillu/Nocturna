@@ -521,3 +521,37 @@ Otherwise student remains mock-backed for the first real-data slice.
 - No local DB policy evidence, query plans or rollback rehearsal.
 
 **C32 status:** `C32_ACTIVE_MEMBERSHIP_SPEC_DRAFTED_NOT_APPROVED_FOR_SQL`.
+
+## C33 Auth Context Dependency Notes
+
+Courses + Sections no puede migrarse antes que el contexto Auth V2 del que
+dependen sus policies.
+
+### Dependencias obligatorias
+
+- `roles` con RoleKey V2.
+- `institution_memberships` con tenant, profile, role y estado actual.
+- selection activa por `session_id`.
+- helpers de contexto no recursivos.
+- `academic_terms`, `sections` y `section_staff`.
+- enrollment V2 por section/term si student real-data se incluye.
+
+### Incompatibilidad V1
+
+- `courses_select_tenant` permite ver todos los cursos del tenant.
+- `enrollments_select_tenant` permite ver todos los enrollments del tenant.
+- `courses.teacher_id` no representa múltiples sections/teachers/assistants.
+- enrollment V1 no tiene section, term o lifecycle.
+- tenant/role únicos del JWT V1 no modelan multi-membership.
+
+Por eso V1 courses/enrollments no satisfacen la matriz V2 aunque sus nombres
+coincidan. Deben evolucionarse mediante un cutover probado; no duplicarse ni
+reutilizar sus policies sin cambios.
+
+### Estado
+
+C33 reduce el blocker al definir inventario, target contract, transición y
+pseudo-SQL Auth. Siguen faltando migration local ejecutable, inspección de drift
+remoto, DB tests y objetos académicos.
+
+**C33 verdict:** `C33_BLOCKERS_REDUCED_BUT_NOT_READY_FOR_MIGRATION`.
