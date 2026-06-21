@@ -140,3 +140,37 @@ La evidencia local es suficiente para detectar incompatibilidades, pero no para
 producir una migración segura: faltan precisamente las tablas Auth V2 que el
 runtime usa. C33 debe ser un schema/context fix pass, no una conversión directa
 de C30 a migración.
+
+## C33 Auth V2 Schema Context Update
+
+### Drift confirmado
+
+C33 confirma mediante referencias directas del runtime que:
+
+- `lib/auth/active-membership.ts` consulta `institution_memberships`;
+- el mismo query espera `role_id` y `roles.key`;
+- ninguna migración local crea `institution_memberships` o `roles`;
+- el runtime espera `institutions.status`, que tampoco está en el schema base V1.
+
+El drift confirmado es entre código y migrations locales. El estado remoto sigue
+sin inspección y no se infiere.
+
+### Decisión de no duplicación
+
+- Conservar `profiles.id = auth.users.id`.
+- Evolucionar `public.institutions`, no crear otro tenant root.
+- Versionar el nombre ya usado por runtime: `institution_memberships`.
+- Definir `roles` como autoridad de role key V2.
+- Evolucionar courses/enrollments existentes mediante transición; no crear una
+  segunda autoridad silenciosa.
+
+### Ruta recomendada
+
+1. Autorizar una inspección remota read-only o recuperar la migration fuente.
+2. Conciliar el schema real con el contrato C33.
+3. Crear una migration local draft separada para roles, memberships y selections.
+4. Probar backfill V1 no destructivo en DB desechable.
+5. Mantener columnas/policies V1 durante el bridge.
+6. Adoptar contexto y policies V2 por slice.
+
+**C33 verdict:** `C33_AUTH_V2_SCHEMA_DRIFT_CONFIRMED`.

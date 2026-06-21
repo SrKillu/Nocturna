@@ -1,0 +1,215 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY DRAFT. DO NOT APPLY.
+-- Not a Supabase migration.
+-- Do not run against production or remote Supabase.
+-- Requires human approval before conversion into migration.
+-- This draft exists only to review Auth V2 schema context.
+--
+-- Every line is commented intentionally. Names, status values, ownership,
+-- grants and policies require reconciliation with the actual local/remote schema.
+-- No destructive operation is proposed.
+
+-- ---------------------------------------------------------------------------
+-- 1. Existing objects to evolve, not duplicate
+-- ---------------------------------------------------------------------------
+
+-- public.profiles.id remains the auth.users(id) identity.
+-- profiles.institution_id and profiles.role remain legacy during transition.
+-- public.institutions remains the tenant root.
+
+-- Candidate non-destructive institution additions:
+-- alter table public.institutions
+--   add column if not exists status text not null default 'active',
+--   add column if not exists locale text not null default 'es-CR',
+--   add column if not exists timezone text not null default 'America/Costa_Rica',
+--   add column if not exists archived_at timestamptz;
+--
+-- NOTE: status defaults/backfill/check constraints require real-data review.
+
+-- ---------------------------------------------------------------------------
+-- 2. System roles
+-- ---------------------------------------------------------------------------
+
+-- create table public.roles (
+--   id uuid primary key default gen_random_uuid(),
+--   key text not null unique,
+--   display_name text not null,
+--   is_system boolean not null default true,
+--   status text not null default 'active'
+--     check (status in ('active', 'retired')),
+--   sort_order integer not null default 0,
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   check (length(btrim(key)) > 0),
+--   check (length(btrim(display_name)) > 0)
+-- );
+--
+-- create index roles_status_order_idx
+--   on public.roles (status, sort_order, key);
+--
+-- Conceptual idempotent seed keys only:
+-- owner, admin, teacher, assistant, student, guardian, support.
+-- Seed IDs and conflict behavior must be approved before executable SQL.
+-- super_admin is NOT silently seeded as a tenant role.
+
+-- ---------------------------------------------------------------------------
+-- 3. Institution memberships
+-- ---------------------------------------------------------------------------
+
+-- create table public.institution_memberships (
+--   id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null
+--     references public.institutions(id) on delete restrict,
+--   profile_id uuid not null
+--     references public.profiles(id) on delete restrict,
+--   role_id uuid not null
+--     references public.roles(id) on delete restrict,
+--   status text not null default 'invited'
+--     check (status in ('invited', 'active', 'suspended', 'left')),
+--   effective_from timestamptz not null default now(),
+--   effective_until timestamptz,
+--   joined_at timestamptz,
+--   revoked_at timestamptz,
+--   session_version bigint not null default 1 check (session_version > 0),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   check (effective_until is null or effective_until > effective_from),
+--   check (revoked_at is null or status in ('suspended', 'left'))
+-- );
+--
+-- REVIEW: exact uniqueness for active memberships requires business approval.
+-- create unique index institution_memberships_active_role_uidx
+--   on public.institution_memberships (institution_id, profile_id, role_id)
+--   where status = 'active';
+-- create index institution_memberships_profile_status_idx
+--   on public.institution_memberships
+--   (profile_id, status, institution_id, id);
+-- create index institution_memberships_institution_role_status_idx
+--   on public.institution_memberships
+--   (institution_id, role_id, status, id);
+-- create index institution_memberships_institution_profile_status_idx
+--   on public.institution_memberships
+--   (institution_id, profile_id, status, id);
+
+-- ---------------------------------------------------------------------------
+-- 4. Per-session active membership selection
+-- ---------------------------------------------------------------------------
+
+-- Preferred location: a reviewed private schema not exposed through Data API.
+-- Name remains conceptual.
+--
+-- create table private.membership_session_selections (
+--   id uuid primary key default gen_random_uuid(),
+--   session_id uuid not null,
+--   profile_id uuid not null
+--     references public.profiles(id) on delete restrict,
+--   membership_id uuid not null
+--     references public.institution_memberships(id) on delete restrict,
+--   status text not null default 'active'
+--     check (status in ('active', 'revoked', 'expired')),
+--   selected_at timestamptz not null default now(),
+--   expires_at timestamptz,
+--   revoked_at timestamptz,
+--   metadata jsonb not null default '{}'::jsonb,
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   check (expires_at is null or expires_at > selected_at),
+--   check (revoked_at is null or status in ('revoked', 'expired')),
+--   check (jsonb_typeof(metadata) = 'object')
+-- );
+--
+-- create unique index membership_session_selections_active_session_uidx
+--   on private.membership_session_selections (session_id)
+--   where status = 'active';
+-- create index membership_session_selections_membership_status_idx
+--   on private.membership_session_selections (membership_id, status);
+-- create index membership_session_selections_profile_status_idx
+--   on private.membership_session_selections (profile_id, status, session_id);
+-- create index membership_session_selections_cleanup_idx
+--   on private.membership_session_selections (expires_at)
+--   where expires_at is not null;
+
+-- ---------------------------------------------------------------------------
+-- 5. Capabilities posture
+-- ---------------------------------------------------------------------------
+
+-- No role_capabilities table is proposed in this first context migration.
+-- ROLE_CAPABILITIES remains the reviewed TypeScript contract temporarily.
+-- RLS must not accept capability values supplied by the browser.
+-- Persisting capabilities requires a separate versioning/invalidation design.
+
+-- ---------------------------------------------------------------------------
+-- 6. Conceptual active-context helpers
+-- ---------------------------------------------------------------------------
+
+-- Conceptual signatures only:
+--   private.current_profile_id() -> uuid
+--   private.current_active_membership_id() -> uuid
+--   private.current_active_institution_id() -> uuid
+--   private.current_role_key() -> text
+--
+-- Requirements:
+--   * bind to auth.uid()
+--   * bind to auth.jwt() ->> 'session_id'
+--   * validate profile, selection, membership, role and institution current state
+--   * fail closed
+--   * expose no private rows
+--   * avoid policy recursion
+--   * use SECURITY INVOKER by default
+--
+-- No SECURITY DEFINER helper is approved by this draft.
+-- If strict auth.sessions lookup proves necessary, it requires a separate
+-- privileged-helper security review, fixed search_path, minimal grants,
+-- revoke from PUBLIC and abuse tests.
+
+-- ---------------------------------------------------------------------------
+-- 7. RLS/grants posture
+-- ---------------------------------------------------------------------------
+
+-- alter table public.roles enable row level security;
+-- alter table public.institution_memberships enable row level security;
+-- alter table private.membership_session_selections enable row level security;
+--
+-- Roles: authenticated clients may receive only active system-role projection
+-- if a product requirement exists; otherwise keep server-side.
+--
+-- Memberships: user may list only own minimal memberships. Administrative
+-- mutations are not part of this draft.
+--
+-- Selections: no direct browser write/read grant. A future server-authorized
+-- selection flow validates auth.uid(), session_id and membership.
+--
+-- Data API exposure and GRANT statements are deliberately omitted.
+-- RLS and table privileges must be reviewed as separate controls.
+
+-- ---------------------------------------------------------------------------
+-- 8. Non-destructive V1 backfill concept
+-- ---------------------------------------------------------------------------
+
+-- For each valid V1 profile with institution_id and role:
+--   * map the legacy role through an approved mapping table/CTE
+--   * insert one institution_membership if no equivalent exists
+--   * preserve profiles.institution_id and profiles.role
+--   * record/report unmappable rows
+--   * prove idempotence and before/after counts
+--
+-- Legacy candidate mapping:
+--   admin -> admin
+--   teacher -> teacher
+--   student -> student
+--   super_admin -> DECISION REQUIRED; never global owner by default
+--
+-- No executable INSERT/backfill statement is included.
+
+-- ---------------------------------------------------------------------------
+-- 9. Deliberately absent
+-- ---------------------------------------------------------------------------
+
+-- No DROP TABLE.
+-- No TRUNCATE.
+-- No DELETE FROM.
+-- No RLS disable.
+-- No remote commands.
+-- No executable seed/backfill.
+-- No modification of V1 policies or token hook.
+-- No Courses + Sections migration.

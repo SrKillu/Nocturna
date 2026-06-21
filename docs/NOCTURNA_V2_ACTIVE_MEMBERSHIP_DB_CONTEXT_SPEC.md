@@ -184,3 +184,29 @@ Reglas:
 ## Veredicto
 
 `C32_ACTIVE_MEMBERSHIP_SPEC_DRAFTED_NOT_APPROVED_FOR_SQL`
+
+## C33 Dependency Update
+
+La active membership depende ahora de un contrato Auth V2 explícito:
+
+- `profiles` global y activo;
+- `roles` versionados con RoleKey V2;
+- `institution_memberships` versionadas y con lifecycle actual;
+- `membership_session_selections` por JWT `session_id`;
+- institution actual derivada de membership;
+- capability matrix revisada.
+
+Las dos primeras tablas esperadas por Auth V2 (`roles` e
+`institution_memberships`) no existen en migrations locales. C33 define su
+contrato y transición, pero no los crea.
+
+`current_active_membership_id()` solo puede aprobarse cuando:
+
+1. esas tablas estén reconciliadas con el estado real;
+2. la selection table tenga grants/RLS aprobados;
+3. el helper use un grafo no recursivo;
+4. la estrategia de sesión sensible esté probada;
+5. el backfill V1 sea verificable y reversible.
+
+El pseudo-SQL C33 es únicamente material de revisión. La especificación continúa:
+`C32_ACTIVE_MEMBERSHIP_SPEC_DRAFTED_NOT_APPROVED_FOR_SQL`.
