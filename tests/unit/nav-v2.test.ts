@@ -38,6 +38,47 @@ function expectVisibleForRoles(
 
 describe('V2 navigation capability contracts', () => {
   it('keeps the effective module visibility matrix unchanged', () => {
+    expectVisibleForRoles('courses', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+      'student',
+    ]);
+    expectVisibleForRoles('students', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectVisibleForRoles('enrollments', ['owner', 'admin']);
+    expectVisibleForRoles('staff', ['owner', 'admin']);
+    expectVisibleForRoles('attendance', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectVisibleForRoles('evaluations', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectVisibleForRoles('gradebook', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectVisibleForRoles('certificates', ['owner', 'admin']);
+    expectVisibleForRoles('materials', [
+      'owner',
+      'admin',
+      'teacher',
+      'assistant',
+    ]);
+    expectVisibleForRoles('my-space', ['student']);
     expectVisibleForRoles('audit-log', ['owner', 'admin']);
     expectVisibleForRoles('schedule', [
       'owner',
@@ -56,6 +97,32 @@ describe('V2 navigation capability contracts', () => {
   });
 
   it('does not accept the replaced temporary capabilities', () => {
+    const managementOnlyNavigation = navIds(
+      {
+        canManageCourses: true,
+        canGrade: true,
+        canSubmit: true,
+        canManageUsers: true,
+        canManageAttendance: true,
+        canManageCertificates: true,
+        canManageMaterials: true,
+      },
+      'admin'
+    );
+    for (const itemId of [
+      'courses',
+      'students',
+      'enrollments',
+      'staff',
+      'attendance',
+      'evaluations',
+      'gradebook',
+      'certificates',
+      'materials',
+      'my-space',
+    ]) {
+      expect(managementOnlyNavigation).not.toContain(itemId);
+    }
     expect(
       navIds(
         {

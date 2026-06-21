@@ -1,4 +1,4 @@
-import type { Capabilities, CapabilityKey } from '@/lib/types/auth';
+import type { Capabilities, CapabilityKey, RoleKey } from '@/lib/types/auth';
 
 export type MySpaceV2Priority = 'high' | 'medium' | 'low';
 export type MySpaceV2Tone = 'success' | 'info' | 'warning' | 'neutral';
@@ -55,19 +55,14 @@ export interface MySpaceV2ViewModel {
 }
 
 export const MY_SPACE_V2_REQUIRED_CAPABILITY =
-  'canSubmit' as const satisfies CapabilityKey;
+  'canViewOwnStudentProfile' as const satisfies CapabilityKey;
 
-export const MY_SPACE_V2_EXCLUDED_CAPABILITIES = [
-  'canManageInstitution',
-  'canManageCourses',
-  'canGrade',
-] as const satisfies readonly CapabilityKey[];
-
-export function canAccessMySpaceV2(capabilities: Capabilities): boolean {
+export function canAccessMySpaceV2(
+  roleKey: RoleKey,
+  capabilities: Capabilities
+): boolean {
   return (
-    capabilities[MY_SPACE_V2_REQUIRED_CAPABILITY] === true &&
-    MY_SPACE_V2_EXCLUDED_CAPABILITIES.every(
-      (capability) => capabilities[capability] !== true
-    )
+    roleKey === 'student' &&
+    capabilities[MY_SPACE_V2_REQUIRED_CAPABILITY] === true
   );
 }

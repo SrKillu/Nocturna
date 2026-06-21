@@ -48,11 +48,11 @@ export interface EvaluationV2FilterState {
 }
 
 export const EVALUATIONS_V2_CAPABILITIES = [
-  'canGrade',
+  'canViewEvaluations',
 ] as const satisfies readonly CapabilityKey[];
 
 export function canAccessEvaluationsV2(capabilities: Capabilities): boolean {
-  return capabilities.canGrade === true;
+  return capabilities.canViewEvaluations === true;
 }
 
 export function evaluationAudienceForRole(

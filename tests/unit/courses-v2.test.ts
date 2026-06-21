@@ -10,10 +10,11 @@ import {
 } from '@/lib/types/courses-v2';
 
 describe('Courses V2 foundation', () => {
-  it('allows course access for management, teaching, and student capabilities', () => {
-    expect(canAccessCoursesV2({ canManageCourses: true })).toBe(true);
-    expect(canAccessCoursesV2({ canGrade: true })).toBe(true);
-    expect(canAccessCoursesV2({ canSubmit: true })).toBe(true);
+  it('requires the explicit course read capability', () => {
+    expect(canAccessCoursesV2({ canViewCourses: true })).toBe(true);
+    expect(canAccessCoursesV2({ canManageCourses: true })).toBe(false);
+    expect(canAccessCoursesV2({ canGrade: true })).toBe(false);
+    expect(canAccessCoursesV2({ canSubmit: true })).toBe(false);
     expect(canAccessCoursesV2({ canViewReports: true })).toBe(false);
   });
 

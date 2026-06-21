@@ -65,7 +65,7 @@ export interface StaffV2FilterState {
 }
 
 export const STAFF_V2_CAPABILITIES = [
-  'canManageUsers',
+  'canViewStaff',
 ] as const satisfies readonly CapabilityKey[];
 export const STAFF_V2_ROLES = [
   'owner',
@@ -78,7 +78,7 @@ export function canAccessStaffV2(
 ): boolean {
   return (
     STAFF_V2_ROLES.includes(roleKey as (typeof STAFF_V2_ROLES)[number]) &&
-    capabilities.canManageUsers === true
+    capabilities.canViewStaff === true
   );
 }
 

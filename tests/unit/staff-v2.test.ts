@@ -27,30 +27,31 @@ describe('Staff V2 foundation', () => {
     expect(getMockStaffV2('support')).toEqual(EMPTY_STAFF_V2);
   });
 
-  it('requires both canManageUsers and owner/admin role scope', () => {
+  it('requires both canViewStaff and owner/admin role scope', () => {
     expect(canAccessStaffV2('owner', ROLE_CAPABILITIES.owner)).toBe(true);
     expect(canAccessStaffV2('admin', ROLE_CAPABILITIES.admin)).toBe(true);
 
-    const teacherWithManageUsers: Capabilities = {
+    const teacherWithViewStaff: Capabilities = {
       ...ROLE_CAPABILITIES.teacher,
-      canManageUsers: true,
+      canViewStaff: true,
     };
-    const ownerWithoutManageUsers: Capabilities = {
+    const ownerWithoutViewStaff: Capabilities = {
       ...ROLE_CAPABILITIES.owner,
-      canManageUsers: false,
+      canViewStaff: false,
     };
 
-    expect(canAccessStaffV2('teacher', teacherWithManageUsers)).toBe(false);
-    expect(canAccessStaffV2('owner', ownerWithoutManageUsers)).toBe(false);
+    expect(canAccessStaffV2('teacher', teacherWithViewStaff)).toBe(false);
+    expect(canAccessStaffV2('owner', ownerWithoutViewStaff)).toBe(false);
   });
 
-  it('does not substitute report, grade or submit capabilities', () => {
+  it('does not substitute management, report, grade or submit capabilities', () => {
     const substitutes: Capabilities = {
       ...ROLE_CAPABILITIES.student,
       canViewReports: true,
       canGrade: true,
       canSubmit: true,
-      canManageUsers: false,
+      canManageUsers: true,
+      canViewStaff: false,
     };
 
     expect(canAccessStaffV2('owner', substitutes)).toBe(false);

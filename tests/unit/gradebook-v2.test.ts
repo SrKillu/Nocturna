@@ -37,8 +37,9 @@ describe('Gradebook V2 foundation', () => {
     );
   });
 
-  it('requires canGrade without granting access through unrelated capabilities', () => {
-    expect(canAccessGradebookV2({ canGrade: true })).toBe(true);
+  it('requires canViewGradebook without granting access through grading', () => {
+    expect(canAccessGradebookV2({ canViewGradebook: true })).toBe(true);
+    expect(canAccessGradebookV2({ canGrade: true })).toBe(false);
     expect(canAccessGradebookV2({ canManageCourses: true })).toBe(false);
     expect(canAccessGradebookV2({ canSubmit: true })).toBe(false);
     expect(canAccessGradebookV2({ canViewReports: true })).toBe(false);

@@ -6,6 +6,7 @@ import {
 } from '@/lib/mocks/students-v2';
 import { navGroupsForCapabilities } from '@/lib/rbac/nav-v2';
 import {
+  canAccessStudentProfileV2,
   canAccessStudentsV2,
   filterStudentsV2,
   studentAudienceForRole,
@@ -21,11 +22,19 @@ const emptyFilters: StudentV2FilterState = {
 };
 
 describe('Students V2 foundation', () => {
-  it('allows institutional and teaching capabilities without exposing a global student view', () => {
-    expect(canAccessStudentsV2({ canManageCourses: true })).toBe(true);
-    expect(canAccessStudentsV2({ canGrade: true })).toBe(true);
+  it('requires the explicit student directory read capability', () => {
+    expect(canAccessStudentsV2({ canViewStudents: true })).toBe(true);
+    expect(canAccessStudentsV2({ canManageCourses: true })).toBe(false);
+    expect(canAccessStudentsV2({ canGrade: true })).toBe(false);
     expect(canAccessStudentsV2({ canSubmit: true })).toBe(false);
     expect(canAccessStudentsV2({ canViewReports: true })).toBe(false);
+  });
+
+  it('uses a distinct read capability for student profiles', () => {
+    expect(canAccessStudentProfileV2({ canViewStudentProfiles: true })).toBe(true);
+    expect(canAccessStudentProfileV2({ canViewStudents: true })).toBe(false);
+    expect(canAccessStudentProfileV2({ canManageCourses: true })).toBe(false);
+    expect(canAccessStudentProfileV2({ canGrade: true })).toBe(false);
   });
 
   it('maps only institutional and teaching roles to student audiences', () => {
@@ -75,10 +84,10 @@ describe('Students V2 foundation', () => {
   });
 
   it('shows navigation only for the same authorized capabilities', () => {
-    const managerItems = navGroupsForCapabilities({ canManageCourses: true })
+    const managerItems = navGroupsForCapabilities({ canViewStudents: true })
       .flatMap((group) => group.items)
       .map((item) => item.id);
-    const studentItems = navGroupsForCapabilities({ canSubmit: true })
+    const studentItems = navGroupsForCapabilities({ canViewOwnStudentProfile: true })
       .flatMap((group) => group.items)
       .map((item) => item.id);
 

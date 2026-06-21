@@ -54,11 +54,11 @@ export interface AttendanceV2FilterState {
 }
 
 export const ATTENDANCE_V2_CAPABILITIES = [
-  'canManageAttendance',
+  'canViewAttendance',
 ] as const satisfies readonly CapabilityKey[];
 
 export function canAccessAttendanceV2(capabilities: Capabilities): boolean {
-  return capabilities.canManageAttendance === true;
+  return capabilities.canViewAttendance === true;
 }
 
 export function attendanceAudienceForRole(

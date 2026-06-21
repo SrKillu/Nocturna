@@ -17,16 +17,16 @@ describe('Enrollments V2 foundation', () => {
       expect(getMockEnrollmentsV2(role)).toEqual(EMPTY_ENROLLMENTS_V2);
     }
   });
-  it('requires canManageCourses and owner/admin role scope', () => {
+  it('requires canViewEnrollments and owner/admin role scope', () => {
     expect(canAccessEnrollmentsV2('owner', ROLE_CAPABILITIES.owner)).toBe(true);
     expect(canAccessEnrollmentsV2('admin', ROLE_CAPABILITIES.admin)).toBe(true);
-    const teacherWithCapability: Capabilities = { ...ROLE_CAPABILITIES.teacher, canManageCourses: true };
-    const ownerWithoutCapability: Capabilities = { ...ROLE_CAPABILITIES.owner, canManageCourses: false };
+    const teacherWithCapability: Capabilities = { ...ROLE_CAPABILITIES.teacher, canViewEnrollments: true };
+    const ownerWithoutCapability: Capabilities = { ...ROLE_CAPABILITIES.owner, canViewEnrollments: false };
     expect(canAccessEnrollmentsV2('teacher', teacherWithCapability)).toBe(false);
     expect(canAccessEnrollmentsV2('owner', ownerWithoutCapability)).toBe(false);
   });
-  it('does not substitute report, grade or submit capabilities', () => {
-    const substitutes: Capabilities = { ...ROLE_CAPABILITIES.student, canViewReports: true, canGrade: true, canSubmit: true, canManageCourses: false };
+  it('does not substitute management, report, grade or submit capabilities', () => {
+    const substitutes: Capabilities = { ...ROLE_CAPABILITIES.student, canViewReports: true, canGrade: true, canSubmit: true, canManageCourses: true, canViewEnrollments: false };
     expect(canAccessEnrollmentsV2('owner', substitutes)).toBe(false);
   });
   it('filters by search, course and status', () => {

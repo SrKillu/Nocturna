@@ -4,8 +4,11 @@ import { getMockMySpaceV2 } from '@/lib/mocks/my-space-v2';
 import { navGroupsForCapabilities } from '@/lib/rbac/nav-v2';
 import { canAccessMySpaceV2 } from '@/lib/types/my-space-v2';
 
-function visibleNavIds(capabilities: Parameters<typeof navGroupsForCapabilities>[0]) {
-  return navGroupsForCapabilities(capabilities)
+function visibleNavIds(
+  capabilities: Parameters<typeof navGroupsForCapabilities>[0],
+  roleKey: Parameters<typeof navGroupsForCapabilities>[1]
+) {
+  return navGroupsForCapabilities(capabilities, roleKey)
     .flatMap((group) => group.items)
     .map((item) => item.id);
 }
@@ -26,29 +29,35 @@ describe('Student Self View V2 foundation', () => {
     expect(getMockMySpaceV2('support')).toBeNull();
   });
 
-  it('uses canSubmit for student self access while excluding institutional capabilities', () => {
-    expect(canAccessMySpaceV2({ canSubmit: true })).toBe(true);
-    expect(canAccessMySpaceV2({ canSubmit: true, canManageCourses: true })).toBe(false);
-    expect(canAccessMySpaceV2({ canSubmit: true, canGrade: true })).toBe(false);
-    expect(canAccessMySpaceV2({ canViewReports: true })).toBe(false);
+  it('requires the explicit self-profile capability and student role', () => {
+    expect(canAccessMySpaceV2('student', { canViewOwnStudentProfile: true })).toBe(true);
+    expect(canAccessMySpaceV2('teacher', { canViewOwnStudentProfile: true })).toBe(false);
+    expect(canAccessMySpaceV2('student', { canSubmit: true })).toBe(false);
+    expect(canAccessMySpaceV2('student', { canManageCourses: true })).toBe(false);
+    expect(canAccessMySpaceV2('student', { canGrade: true })).toBe(false);
   });
 
   it('shows Mi espacio only to the student-oriented capability set', () => {
-    expect(visibleNavIds({ canSubmit: true })).toContain('my-space');
-    expect(visibleNavIds({ canManageCourses: true })).not.toContain('my-space');
-    expect(visibleNavIds({ canGrade: true })).not.toContain('my-space');
+    expect(visibleNavIds({ canViewOwnStudentProfile: true }, 'student')).toContain('my-space');
+    expect(visibleNavIds({ canViewOwnStudentProfile: true }, 'teacher')).not.toContain('my-space');
+    expect(visibleNavIds({ canSubmit: true }, 'student')).not.toContain('my-space');
+    expect(visibleNavIds({ canManageCourses: true }, 'student')).not.toContain('my-space');
+    expect(visibleNavIds({ canGrade: true }, 'student')).not.toContain('my-space');
     expect(
       visibleNavIds({
-        canSubmit: true,
+        canViewOwnStudentProfile: true,
         canManageInstitution: true,
         canManageCourses: true,
         canGrade: true,
-      })
-    ).not.toContain('my-space');
+      }, 'student')
+    ).toContain('my-space');
   });
 
-  it('does not expose the global students navigation to canSubmit-only memberships', () => {
-    const studentNavigation = visibleNavIds({ canSubmit: true });
+  it('does not expose the global students navigation to self-profile memberships', () => {
+    const studentNavigation = visibleNavIds({
+      canViewOwnStudentProfile: true,
+      canViewCourses: true,
+    }, 'student');
 
     expect(studentNavigation).toContain('my-space');
     expect(studentNavigation).toContain('courses');
