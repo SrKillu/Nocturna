@@ -243,3 +243,15 @@ draft skeletons, followed by synthetic grants/RLS test evidence.
 
 Next gate: implement and review a dry-run-first disposable harness, then obtain
 separate approval to start local Supabase and test executable migration drafts.
+
+## C39 Harness Implementation Note
+
+- A dry-run-only preflight/orchestration harness now exists.
+- Redaction, evidence allowlisting and target-specific cleanup planning have
+  focused unit tests.
+- The harness executes no SQL, service command or cleanup action.
+- There is still no executed schema, grant or RLS evidence.
+- No module is ready for real data or adapters.
+
+Next gate: approved dry-run execution and evidence review, followed only later
+by separate approval for local disposable Supabase execution.

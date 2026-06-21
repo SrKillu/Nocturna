@@ -120,3 +120,14 @@ STATUS: PENDING_REVIEW
 - Client code still cannot assert tenant, role or relationship authority.
 - No privileged service credential may enter browser code, logs or evidence.
 - C38 does not change runtime, endpoints, middleware or V1.
+
+## C39 Harness implementation impact
+
+- V2 UI remains mock-backed and runtime is unchanged.
+- Real adapters remain blocked because no database policy has been executed.
+- The dry-run harness prepares safe future evidence for schema, grants/RLS and
+  relationship tests.
+- Redaction and evidence allowlisting reduce the risk of leaking credentials in
+  future test artifacts.
+- Client authority rules and feature-flag boundaries remain unchanged.
+- No privileged service credential may enter browser code.
