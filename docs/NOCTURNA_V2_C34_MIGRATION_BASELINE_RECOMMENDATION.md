@@ -124,3 +124,21 @@ No C35 artifact should be applied remotely without a new explicit approval.
 ## Safety decision
 
 `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`
+
+## C35 Strategic Decision Follow-up
+
+C35 keeps the baseline recommendation as necessary evidence for the current
+project, but pivots the preferred V2 implementation path to clean staging.
+
+- Current DB baseline/reconciliation remains mandatory if critical data must be
+  preserved or migrated.
+- Clean Supabase V2 staging is the preferred architecture destination because
+  it can start with deterministic migrations and deny-by-default policies.
+- The current project must not be reset, abandoned or changed until a
+  data-retention audit is approved.
+
+Strategic verdict:
+`C35_RECOMMEND_HYBRID_CLEAN_STAGING_THEN_MIGRATE`
+
+Immediate gate:
+`C35_RECOMMEND_DATA_RETENTION_AUDIT`

@@ -186,3 +186,16 @@ The first academic-core readiness work should focus on courses, sections, studen
 Result: `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
 
 Next gate: baseline reconciliation plus disposable-database RLS tests.
+
+## C35 Rebuild Strategy Note
+
+- No domain module is ready for real data integration.
+- Auth V2 database authority remains absent.
+- A clean staging baseline can reduce historical policy/grant risk.
+- Clean does not mean untested: every table still needs explicit grants, RLS,
+  relationship tests and cross-tenant denial.
+- The current database remains legacy until retention is decided.
+- Real adapters remain blocked.
+
+Recommended posture: clean V2 staging plus synthetic policy tests, with no
+production cutover until retention and migration scope are approved.
