@@ -140,3 +140,52 @@ Before any real-data UI integration:
 6. Query plans confirm relationship checks use expected indexes.
 7. No browser path uses `service_role`.
 8. Human review approves SQL, seed, rollback and policy evidence.
+
+## 10. C31 hardening cases
+
+| ID | Area | Scenario | Expected |
+|---|---|---|---|
+| C31-A01 | Active membership | User has Alpha and Beta memberships; session A selects Alpha | Only Alpha rows; Beta IDs safe not-found |
+| C31-A02 | Multi-device | Same user session A selects Alpha and session B selects Beta | Each session remains isolated; changing A does not alter B |
+| C31-A03 | Selector tampering | Cookie/selector references another user's membership | Deny and require valid active context |
+| C31-A04 | Revocation | Membership is suspended/revoked before a sensitive query | Current DB status denies even if JWT/cookie is stale |
+| C31-A05 | During request | Membership is revoked between list and detail | Detail reauthorizes and returns safe denial/not-found |
+| C31-A06 | Profile/institution | Profile or institution becomes inactive | Context resolution fails closed |
+| C31-A07 | Session | Auth session is revoked | Stored selection cannot restore access |
+| C31-S01 | Exact staff scope | Teacher assigned to section A opens course with A and B | Course may be visible; only A appears |
+| C31-S02 | Sibling section ID | Same teacher requests section B directly | Safe not-found |
+| C31-S03 | Staff label | First-slice adapter has no approved public projection | Generic “Equipo docente”; no private profile query |
+| C31-S04 | Public projection | Approved minimal projection is queried | Only display label and assignment role; no email/auth/HR fields |
+| C31-S05 | Recursion | Policy/view dependency graph is exercised | No recursive policy error and no bypass |
+| C31-S06 | View mode | Security-invoker view is compared with an unsafe definer control | Only reviewed invoker design is grantable |
+| C31-H01 | Archived default | Any actor runs ordinary list/detail | Archived course/section absent |
+| C31-H02 | Closed term admin | Owner/admin supplies approved historical filter | Same-tenant closed-term rows only |
+| C31-H03 | Closed term staff/student | Staff/student supplies historical filter | No scope expansion; historical access deferred |
+| C31-H04 | Historical direct ID | Actor knows archived/out-of-scope ID | Safe not-found |
+| C31-E01 | Student included | Active student/enrollment slice is enabled | Only exact enrolled sections and courses |
+| C31-E02 | Student relation revoked | Enrollment becomes withdrawn/suspended | Current course/section access denied |
+| C31-E03 | Student deferred | Enrollment policies are not in first migration | Real adapter disabled for student; mock/demo path remains explicit |
+| C31-E04 | Peer privacy | Student queries peer enrollment/count detail | Denied; no peer identity leakage |
+| C31-C01 | Count projection | Staff requests count for assigned section | Approved aggregate only; no student rows |
+| C31-C02 | Count scope | Staff requests count for sibling/unassigned section | Denied/absent |
+
+### Additional seed required by C31
+
+- One authenticated user with active memberships in Alpha and Beta.
+- Two simultaneous session-selection records for that user.
+- Suspended membership, inactive profile and suspended institution.
+- Course with two sections and non-overlapping staff assignments.
+- Public staff label fixture plus private fields that must never project.
+- Closed and archived records with known IDs.
+- Active, completed, withdrawn and suspended enrollment relationships.
+
+### C31 acceptance additions
+
+- Active-membership lookup uses current DB state and a per-session selection.
+- The policy dependency graph has no recursion.
+- Views preserve base RLS and expose only explicitly granted columns.
+- Historical filters cannot be used by unapproved roles.
+- Student behavior is explicitly either fully policy-tested or mock-backed; there
+  is no partial institution-wide fallback.
+- Revocation cases are exercised in separate requests and documented transaction
+  semantics cover changes during a request.

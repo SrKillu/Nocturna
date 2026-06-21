@@ -401,3 +401,57 @@ Official guidance reviewed for this draft reinforces that:
 - current declarative schema tooling is experimental and is not part of C30.
 
 Sources: [Supabase RLS documentation](https://supabase.com/docs/guides/database/postgres/row-level-security), [tables/view security](https://supabase.com/docs/guides/database/tables), and [April 2026 changelog](https://supabase.com/changelog).
+
+## C31 Review Notes
+
+### Main findings
+
+- The draft remains useful, but `current_active_membership_id()` is still a
+  migration blocker rather than an implementation contract.
+- Active membership must be persisted server-side per authenticated session and
+  revalidated against current membership, profile and institution state.
+- A cookie may select context, but it must never authorize tenant scope.
+- JWT/app metadata may be server-controlled but can be stale; it is not sufficient
+  without a current DB relationship check.
+- Course visibility through one staff assignment must not expose sibling sections.
+- Student real-data visibility requires minimal students/enrollments plus complete
+  policy tests; otherwise the student route remains mock-backed temporarily.
+- `teacherName` must not be produced from private profiles. The first real slice
+  should use “Equipo docente” until a public projection is approved.
+- Archived/closed content must be excluded from ordinary queries.
+- The future policy dependency graph must be checked for recursion before any
+  view/helper is accepted.
+
+### Recommended decisions
+
+1. Use server-managed active membership state keyed by authenticated session,
+   with DB joins that verify current status on every sensitive query.
+2. Include student access only when the enrollment slice and negative tests ship
+   together; never substitute institution-wide student access.
+3. Hide archived records by default. Permit closed-term history only to
+   owner/admin through an explicit authorized filter.
+4. Start with a generic staff label. Review a minimal `security_invoker`
+   projection later; do not use `SECURITY DEFINER` as a shortcut.
+5. Authorize embedded sections independently from the parent course.
+
+### Migration blockers
+
+- Approved active-membership/session contract.
+- Existing schema and migration reconciliation.
+- Declarative tenant-equality constraints across section, term, assignment,
+  student and enrollment relationships.
+- Closed decision on whether student policies are included in the first migration.
+- Non-recursive staff/count projection design.
+- Local executable policy tests, query-plan evidence and rollback/forward-fix.
+- Explicit grants/Data API exposure review.
+
+### Conceptually ready
+
+- Courses + Sections read-only remains the preferred first vertical slice.
+- Owner/admin same-tenant scope, exact staff assignment scope, optional exact
+  student enrollment scope, guardian/support denial and safe not-found are the
+  correct policy shape.
+- Tenant-scoped uniqueness, relationship indexes, two-tenant seed and bounded
+  list/detail contracts remain valid starting points.
+
+**C31 verdict:** `C31_C30_DRAFT_NEEDS_FIXES`.
