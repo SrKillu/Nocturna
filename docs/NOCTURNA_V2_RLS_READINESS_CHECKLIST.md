@@ -21,6 +21,17 @@ A module is not ready for real Supabase integration merely because its route, mo
 - No SQL RLS policy matrix is approved.
 - Every C29 entity, index and policy statement remains conceptual and `PENDING_REVIEW`.
 
+## C30 Courses + Sections planning update
+
+- A review-only Courses + Sections schema/RLS draft now documents probable tables, constraints, tenant paths and read policies.
+- A fully commented pseudo-SQL artifact exists under `docs/sql-drafts/`; it is not a migration and must not be applied.
+- Positive and negative policy cases are specified for owner, admin, assigned/unassigned staff, enrolled/unenrolled student, guardian, support, cross-institution, unauthenticated and inactive-membership actors.
+- Tenant, relationship and deterministic-pagination indexes are proposed.
+- A synthetic two-institution seed plan and rollback/safety notes are proposed.
+- No executable migration is approved.
+- No remote Supabase change occurred.
+- Courses and sections remain **not ready for integration** until human review approves active-membership context, SQL, policies, projections, seed, rollback and test evidence.
+
 Statuses:
 
 - **Done:** present and usable for planning.
@@ -53,8 +64,8 @@ Statuses:
 
 | Module | Existing foundation (C1–C5) | Capabilities (C6–C7) | Data and policy (C8–C13) | Operations (C14–C16) | Current readiness |
 |---|---|---|---|---|---|
-| Courses | C1–C5 Done | C6 Done (`canViewCourses`); C7 Partial (`canManageCourses`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
-| Sections | C1 Missing; C2–C4 Partial through course mocks; C5 Missing | C6 Done (`canViewSections`); C7 Partial (`canManageSections`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Partial; C15 Drafted; C16 Missing | Not ready |
+| Courses | C1–C5 Done | C6 Done (`canViewCourses`); C7 Partial (`canManageCourses`) | C8–C13 Drafted review-only | C14 Done; C15–C16 Drafted | Not ready — human approval and executed policy evidence missing |
+| Sections | C1 Missing; C2–C4 Partial through course mocks; C5 Missing | C6 Done (`canViewSections`); C7 Partial (`canManageSections`) | C8–C13 Drafted review-only | C14 Partial; C15–C16 Drafted | Not ready — no route and no executed policy evidence |
 | Students | C1–C5 Done | C6 Done (`canViewStudents`, `canViewStudentProfiles`, `canViewOwnStudentProfile`); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
 | Guardians | C1–C5 Done through guardian space | C6 Done (`canViewLinkedStudents`); C7 Missing (`canManageGuardianLinks`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted/N/A; C16 Missing | Not ready |
 | Staff | C1–C5 Done | C6 Done (`canViewStaff`); C7 Partial (`canManageUsers`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |

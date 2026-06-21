@@ -1,0 +1,440 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY DRAFT. DO NOT APPLY.
+-- Not a Supabase migration.
+-- Do not run against production or remote Supabase.
+-- Requires human approval before conversion into migration.
+--
+-- Every statement in this file is commented intentionally.
+-- Names must be reconciled with the existing Nocturna schema.
+-- The active-membership helper is unresolved and MUST NOT trust client input
+-- or editable user_metadata. No SECURITY DEFINER helper is approved here.
+
+-- ---------------------------------------------------------------------------
+-- 1. Proposed identity and tenancy interfaces
+-- ---------------------------------------------------------------------------
+
+-- create table public.institutions (
+--   institution_id uuid primary key default gen_random_uuid(),
+--   code text not null,
+--   display_name text not null,
+--   status text not null default 'active'
+--     check (status in ('provisioning', 'active', 'suspended', 'archived')),
+--   locale text not null default 'es-CR',
+--   timezone text not null default 'America/Costa_Rica',
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   archived_at timestamptz,
+--   check (length(btrim(code)) > 0),
+--   check (length(btrim(display_name)) > 0),
+--   check ((status = 'archived') = (archived_at is not null))
+-- );
+--
+-- create unique index institutions_code_normalized_uidx
+--   on public.institutions (lower(btrim(code)));
+-- create index institutions_status_idx
+--   on public.institutions (status, institution_id);
+
+-- create table public.profiles (
+--   profile_id uuid primary key default gen_random_uuid(),
+--   auth_user_id uuid not null unique references auth.users(id) on delete restrict,
+--   display_name text not null,
+--   status text not null default 'active'
+--     check (status in ('active', 'inactive', 'archived')),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   archived_at timestamptz,
+--   check (length(btrim(display_name)) > 0),
+--   check ((status = 'archived') = (archived_at is not null))
+-- );
+--
+-- create index profiles_status_idx
+--   on public.profiles (status, profile_id);
+
+-- create table public.memberships (
+--   membership_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   profile_id uuid not null references public.profiles(profile_id) on delete restrict,
+--   role_key text not null
+--     check (role_key in ('owner', 'admin', 'teacher', 'assistant', 'student', 'guardian', 'support')),
+--   status text not null default 'active'
+--     check (status in ('invited', 'active', 'suspended', 'revoked', 'expired')),
+--   effective_from timestamptz not null default now(),
+--   effective_until timestamptz,
+--   session_version bigint not null default 1 check (session_version > 0),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   check (effective_until is null or effective_until > effective_from)
+-- );
+--
+-- create index memberships_profile_status_idx
+--   on public.memberships (profile_id, status, institution_id, membership_id);
+-- create index memberships_institution_role_status_idx
+--   on public.memberships (institution_id, role_key, status, membership_id);
+-- create index memberships_institution_profile_status_idx
+--   on public.memberships (institution_id, profile_id, status, membership_id);
+--
+-- REVIEW DECISION:
+-- Define a trusted database-visible selected active membership mechanism.
+-- Conceptual signature only:
+--   private.current_active_membership_id() -> uuid
+-- Requirements:
+--   * binds to auth.uid()
+--   * resolves an active membership
+--   * cannot be selected through arbitrary client institution_id input
+--   * defines multi-device behavior and revocation freshness
+
+-- create table public.academic_terms (
+--   academic_term_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   code text not null,
+--   name text not null,
+--   start_date date not null,
+--   end_date date not null,
+--   status text not null default 'planning'
+--     check (status in ('planning', 'active', 'closed', 'archived')),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   archived_at timestamptz,
+--   check (length(btrim(code)) > 0),
+--   check (length(btrim(name)) > 0),
+--   check (start_date <= end_date),
+--   check ((status = 'archived') = (archived_at is not null))
+-- );
+--
+-- create unique index academic_terms_institution_code_uidx
+--   on public.academic_terms (institution_id, lower(btrim(code)));
+-- create index academic_terms_institution_status_start_idx
+--   on public.academic_terms (institution_id, status, start_date desc, academic_term_id);
+
+-- ---------------------------------------------------------------------------
+-- 2. Courses and sections
+-- ---------------------------------------------------------------------------
+
+-- create table public.courses (
+--   course_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   code text not null,
+--   name text not null,
+--   description text not null default '',
+--   level text not null check (level in ('primary', 'secondary')),
+--   category text not null check (category in ('sciences', 'languages', 'humanities', 'technology')),
+--   status text not null default 'planning'
+--     check (status in ('planning', 'active', 'completed', 'archived')),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   archived_at timestamptz,
+--   check (length(btrim(code)) > 0),
+--   check (length(btrim(name)) > 0),
+--   check ((status = 'archived') = (archived_at is not null))
+-- );
+--
+-- create unique index courses_institution_code_uidx
+--   on public.courses (institution_id, lower(btrim(code)));
+-- create index courses_institution_status_name_idx
+--   on public.courses (institution_id, status, lower(btrim(name)), course_id);
+-- create index courses_institution_status_code_idx
+--   on public.courses (institution_id, status, lower(btrim(code)), course_id);
+-- create index courses_institution_level_category_status_idx
+--   on public.courses (institution_id, level, category, status, course_id);
+
+-- create table public.sections (
+--   section_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   course_id uuid not null references public.courses(course_id) on delete restrict,
+--   academic_term_id uuid not null references public.academic_terms(academic_term_id) on delete restrict,
+--   code text not null,
+--   display_name text not null,
+--   capacity integer not null default 0 check (capacity >= 0),
+--   room_label text,
+--   schedule_label text,
+--   status text not null default 'planning'
+--     check (status in ('planning', 'open', 'active', 'completed', 'cancelled', 'archived')),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   archived_at timestamptz,
+--   check (length(btrim(code)) > 0),
+--   check (length(btrim(display_name)) > 0),
+--   check ((status = 'archived') = (archived_at is not null))
+-- );
+--
+-- NOTE: C30 requires an approved strategy to enforce that section,
+-- course, and academic term share institution_id. Options for review:
+--   A. composite unique keys plus composite foreign keys including institution_id
+--   B. a trusted write function/trigger with tests
+-- Prefer declarative composite constraints if they remain understandable.
+--
+-- create unique index sections_institution_term_course_code_uidx
+--   on public.sections (
+--     institution_id,
+--     academic_term_id,
+--     course_id,
+--     lower(btrim(code))
+--   );
+-- create index sections_institution_course_term_status_idx
+--   on public.sections (institution_id, course_id, academic_term_id, status, section_id);
+-- create index sections_course_status_idx
+--   on public.sections (course_id, status, section_id);
+-- create index sections_term_status_idx
+--   on public.sections (academic_term_id, status, section_id);
+
+-- create table public.section_staff (
+--   section_staff_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   section_id uuid not null references public.sections(section_id) on delete restrict,
+--   membership_id uuid not null references public.memberships(membership_id) on delete restrict,
+--   assignment_role text not null check (assignment_role in ('teacher', 'assistant')),
+--   status text not null default 'active'
+--     check (status in ('planned', 'active', 'ended', 'revoked')),
+--   effective_from timestamptz not null default now(),
+--   effective_until timestamptz,
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   check (effective_until is null or effective_until > effective_from)
+-- );
+--
+-- create unique index section_staff_active_assignment_uidx
+--   on public.section_staff (section_id, membership_id, assignment_role)
+--   where status = 'active';
+-- create index section_staff_membership_status_section_idx
+--   on public.section_staff (membership_id, status, section_id);
+-- create index section_staff_section_status_membership_idx
+--   on public.section_staff (section_id, status, membership_id);
+-- create index section_staff_institution_status_idx
+--   on public.section_staff (institution_id, status, section_staff_id);
+
+-- ---------------------------------------------------------------------------
+-- 3. Minimal student relationship for current route parity
+-- ---------------------------------------------------------------------------
+
+-- create table public.students (
+--   student_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   profile_id uuid references public.profiles(profile_id) on delete restrict,
+--   student_code text not null,
+--   status text not null default 'active'
+--     check (status in ('active', 'inactive', 'withdrawn', 'graduated', 'archived')),
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   archived_at timestamptz,
+--   check (length(btrim(student_code)) > 0),
+--   check ((status = 'archived') = (archived_at is not null))
+-- );
+--
+-- create unique index students_institution_code_uidx
+--   on public.students (institution_id, lower(btrim(student_code)));
+-- create unique index students_active_profile_uidx
+--   on public.students (institution_id, profile_id)
+--   where profile_id is not null and status = 'active';
+-- create index students_profile_status_idx
+--   on public.students (profile_id, status, institution_id, student_id);
+
+-- create table public.enrollments (
+--   enrollment_id uuid primary key default gen_random_uuid(),
+--   institution_id uuid not null references public.institutions(institution_id) on delete restrict,
+--   student_id uuid not null references public.students(student_id) on delete restrict,
+--   section_id uuid not null references public.sections(section_id) on delete restrict,
+--   academic_term_id uuid not null references public.academic_terms(academic_term_id) on delete restrict,
+--   status text not null default 'pending'
+--     check (status in ('pending', 'active', 'suspended', 'completed', 'withdrawn', 'rejected')),
+--   effective_from timestamptz not null default now(),
+--   effective_until timestamptz,
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now(),
+--   check (effective_until is null or effective_until > effective_from)
+-- );
+--
+-- NOTE: student, section, academic term and enrollment institution equality
+-- needs the same approved declarative/composite strategy as sections.
+--
+-- create unique index enrollments_active_student_section_term_uidx
+--   on public.enrollments (student_id, section_id, academic_term_id)
+--   where status = 'active';
+-- create index enrollments_student_status_section_idx
+--   on public.enrollments (student_id, status, section_id);
+-- create index enrollments_section_status_student_idx
+--   on public.enrollments (section_id, status, student_id);
+-- create index enrollments_institution_status_idx
+--   on public.enrollments (institution_id, status, enrollment_id);
+-- create index enrollments_term_status_idx
+--   on public.enrollments (academic_term_id, status, enrollment_id);
+
+-- ---------------------------------------------------------------------------
+-- 4. RLS posture
+-- ---------------------------------------------------------------------------
+
+-- alter table public.institutions enable row level security;
+-- alter table public.profiles enable row level security;
+-- alter table public.memberships enable row level security;
+-- alter table public.academic_terms enable row level security;
+-- alter table public.courses enable row level security;
+-- alter table public.sections enable row level security;
+-- alter table public.section_staff enable row level security;
+-- alter table public.students enable row level security;
+-- alter table public.enrollments enable row level security;
+--
+-- Conceptual helper contracts (not approved implementations):
+--   private.current_active_membership_id()
+--   private.current_active_membership_role()
+--   private.current_active_institution_id()
+--   private.current_profile_id()
+--   private.membership_has_capability(capability_key text)
+--
+-- Helpers must be reviewed for search_path, grants, volatility, RLS behavior,
+-- revocation freshness, multi-membership selection, and security-invoker use.
+-- No SECURITY DEFINER helper is approved by this draft.
+
+-- ---------------------------------------------------------------------------
+-- 5. Conceptual SELECT policies
+-- ---------------------------------------------------------------------------
+
+-- create policy courses_select_same_tenant_admin_or_relationship
+-- on public.courses
+-- for select
+-- to authenticated
+-- using (
+--   institution_id = private.current_active_institution_id()
+--   and status <> 'archived'
+--   and private.membership_has_capability('canViewCourses')
+--   and (
+--     private.current_active_membership_role() in ('owner', 'admin')
+--     or exists (
+--       select 1
+--       from public.sections s
+--       join public.section_staff ss on ss.section_id = s.section_id
+--       where s.course_id = courses.course_id
+--         and s.institution_id = courses.institution_id
+--         and s.status in ('open', 'active', 'completed')
+--         and ss.membership_id = private.current_active_membership_id()
+--         and ss.status = 'active'
+--     )
+--     or exists (
+--       select 1
+--       from public.sections s
+--       join public.enrollments e on e.section_id = s.section_id
+--       join public.students st on st.student_id = e.student_id
+--       where s.course_id = courses.course_id
+--         and s.institution_id = courses.institution_id
+--         and s.status in ('open', 'active', 'completed')
+--         and e.status = 'active'
+--         and st.profile_id = private.current_profile_id()
+--         and st.status = 'active'
+--     )
+--   )
+-- );
+
+-- create policy sections_select_same_tenant_admin_or_exact_relationship
+-- on public.sections
+-- for select
+-- to authenticated
+-- using (
+--   institution_id = private.current_active_institution_id()
+--   and status <> 'archived'
+--   and private.membership_has_capability('canViewSections')
+--   and (
+--     private.current_active_membership_role() in ('owner', 'admin')
+--     or exists (
+--       select 1
+--       from public.section_staff ss
+--       where ss.section_id = sections.section_id
+--         and ss.membership_id = private.current_active_membership_id()
+--         and ss.status = 'active'
+--     )
+--     or exists (
+--       select 1
+--       from public.enrollments e
+--       join public.students st on st.student_id = e.student_id
+--       where e.section_id = sections.section_id
+--         and e.status = 'active'
+--         and st.profile_id = private.current_profile_id()
+--         and st.status = 'active'
+--     )
+--   )
+-- );
+
+-- create policy academic_terms_select_for_visible_scope
+-- on public.academic_terms
+-- for select
+-- to authenticated
+-- using (
+--   institution_id = private.current_active_institution_id()
+--   and exists (
+--     select 1
+--     from public.sections s
+--     where s.academic_term_id = academic_terms.academic_term_id
+--   )
+-- );
+-- NOTE: implementation must prove the nested section is itself visible,
+-- or use a policy-safe server query that cannot leak unrelated terms.
+
+-- create policy section_staff_select_public_assignment_scope
+-- on public.section_staff
+-- for select
+-- to authenticated
+-- using (
+--   institution_id = private.current_active_institution_id()
+--   and status = 'active'
+--   and (
+--     private.current_active_membership_role() in ('owner', 'admin')
+--     or membership_id = private.current_active_membership_id()
+--     or exists (
+--       select 1
+--       from public.enrollments e
+--       join public.students st on st.student_id = e.student_id
+--       where e.section_id = section_staff.section_id
+--         and e.status = 'active'
+--         and st.profile_id = private.current_profile_id()
+--         and st.status = 'active'
+--     )
+--   )
+-- );
+-- NOTE: base-table visibility does not define the staff projection.
+-- The future adapter must expose only an approved display projection.
+-- Co-staff visibility for assigned teachers/assistants is intentionally unresolved:
+-- a self-referential section_staff policy can recurse. Do not solve this by adding
+-- SECURITY DEFINER casually. A dedicated safe read model/projection may be required.
+
+-- create policy students_select_own_minimal_relationship
+-- on public.students
+-- for select
+-- to authenticated
+-- using (
+--   institution_id = private.current_active_institution_id()
+--   and profile_id = private.current_profile_id()
+--   and status = 'active'
+-- );
+
+-- create policy enrollments_select_admin_staff_aggregate_or_own
+-- on public.enrollments
+-- for select
+-- to authenticated
+-- using (
+--   institution_id = private.current_active_institution_id()
+--   and (
+--     private.current_active_membership_role() in ('owner', 'admin')
+--     or exists (
+--       select 1
+--       from public.section_staff ss
+--       where ss.section_id = enrollments.section_id
+--         and ss.membership_id = private.current_active_membership_id()
+--         and ss.status = 'active'
+--     )
+--     or exists (
+--       select 1
+--       from public.students st
+--       where st.student_id = enrollments.student_id
+--         and st.profile_id = private.current_profile_id()
+--         and st.status = 'active'
+--     )
+--   )
+-- );
+-- NOTE: first-slice server projection should expose counts/relationship checks,
+-- not general enrollment rows.
+
+-- ---------------------------------------------------------------------------
+-- 6. Deliberately absent
+-- ---------------------------------------------------------------------------
+
+-- No INSERT, UPDATE or DELETE policies are proposed for browser/domain clients.
+-- No grants or Data API exposure are approved.
+-- No view, function, trigger, RPC, seed statement or migration wrapper is approved.
+-- No course, section, staff assignment or enrollment mutation is included.
