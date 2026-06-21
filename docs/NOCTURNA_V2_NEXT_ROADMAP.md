@@ -27,6 +27,9 @@ Make the existing V2 visual runtime internally consistent and ready for data-con
 ### Work
 
 - Clean up navigation ordering, labels, grouping, and duplicated destinations.
+- Complete C26 read/write capability split planning before adding further domain permissions.
+- Implement the approved read/write capability matrix in a future safe batch without broadening effective role access.
+- Update centralized route-role contracts in the same change that adopts new read capabilities.
 - Replace temporary capability substitutions:
   - audit log from settings visibility to `canViewAuditLog`
   - schedule from attendance management to schedule-specific view/manage capabilities
@@ -68,6 +71,7 @@ Design the tenant-safe academic data foundation without applying unreviewed migr
 ### Work
 
 - Review the current Supabase schema and migration history without changing the remote project.
+- Require an approved capability-to-RLS operation mapping before drafting each domain migration.
 - Model institutions, terms, memberships, roles, students, guardians, staff, courses, sections, groups, enrollments, and assignments.
 - Model attendance, evaluations, grade items, scores, materials, notifications, audit events, and settings in dependency order.
 - Define immutable identifiers, foreign keys, lifecycle states, uniqueness constraints, timestamps, soft-delete/archive policy, and audit requirements.
