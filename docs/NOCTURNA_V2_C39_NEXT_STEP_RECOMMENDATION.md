@@ -36,3 +36,17 @@ C40 may:
 
 C40 dry-run execution requires approval. Any later local Supabase startup
 requires a separate, explicit authorization after C40 evidence review.
+
+## C40 Follow-up
+
+C40 executed all three approved dry-run CLI forms and captured redacted
+evidence. The canonical root and safety checks passed; inherited
+`supabase/.temp` blocked as expected and `.env*` presence was reported without
+content access.
+
+Next recommendation:
+
+`C40_RECOMMEND_C41_LOCAL_SUPABASE_START_APPROVAL_PLAN`
+
+C41 should define isolation and approval requirements. It must not start
+Supabase itself.

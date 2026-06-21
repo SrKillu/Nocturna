@@ -385,3 +385,22 @@ Recommended next batch:
 
 C40 should execute only the dry-run CLI and capture redacted evidence. Local
 Supabase startup remains separately blocked.
+
+## C40 Dry-run Harness Execution and Evidence
+
+C40 executed the three approved C39 CLI paths in dry-run mode and captured
+redacted evidence.
+
+- Canonical root, command/path planning and safe defaults passed.
+- `supabase/.temp` produced the expected fail-closed blocker.
+- Existing `.env*` produced an existence-only warning.
+- All evidence artifacts passed redaction review.
+- No Supabase service, SQL, migration, database or cleanup action ran.
+
+Recommended next batch:
+
+`C40_RECOMMEND_C41_LOCAL_SUPABASE_START_APPROVAL_PLAN`
+
+C41 should define an isolated local workdir, exact commands, resource identity,
+credential/redaction boundaries and a human go/no-go gate. It must not start
+Supabase during the planning batch.

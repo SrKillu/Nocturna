@@ -255,3 +255,14 @@ separate approval to start local Supabase and test executable migration drafts.
 
 Next gate: approved dry-run execution and evidence review, followed only later
 by separate approval for local disposable Supabase execution.
+
+## C40 Dry-run Evidence Note
+
+- Preflight and runner were executed only in dry-run mode.
+- Redacted evidence and expected blockers were captured.
+- The harness failed closed on inherited `supabase/.temp` state.
+- No schema, grant, RLS or policy test was executed.
+- No module is ready for real data or adapters.
+
+Next gate: an explicit local Supabase startup approval/isolation plan, or harness
+hardening if that planning reveals a defect.

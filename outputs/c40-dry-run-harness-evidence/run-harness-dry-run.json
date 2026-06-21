@@ -1,0 +1,158 @@
+{
+  "status": "BLOCKED",
+  "dryRun": true,
+  "explain": false,
+  "phases": [
+    "PREFLIGHT",
+    "PLAN_WORKDIR",
+    "PLAN_MIGRATION_ORDER",
+    "PLAN_SYNTHETIC_SEED",
+    "PLAN_SCHEMA_ASSERTIONS",
+    "PLAN_POLICY_TESTS",
+    "PLAN_APP_CHECKS",
+    "PLAN_EVIDENCE",
+    "PLAN_CLEANUP"
+  ],
+  "preflight": {
+    "status": "BLOCKED",
+    "checks": [
+      {
+        "id": "repo-root",
+        "status": "PASS",
+        "message": "Repository root matches the approved checkout."
+      },
+      {
+        "id": "planned-commands",
+        "status": "PASS",
+        "message": "No forbidden command is planned."
+      },
+      {
+        "id": "planned-paths",
+        "status": "PASS",
+        "message": "No forbidden path is planned."
+      },
+      {
+        "id": "supabase-temp",
+        "status": "BLOCKED",
+        "message": "supabase/.temp exists; linked/local state must be isolated before execution."
+      },
+      {
+        "id": "env-files",
+        "status": "WARNING",
+        "message": "Environment files exist; the harness will not read them."
+      },
+      {
+        "id": "dry-run",
+        "status": "PASS",
+        "message": "Dry-run is enforced and remote mode is disabled."
+      }
+    ],
+    "warnings": [
+      "env-files-present-not-read"
+    ],
+    "blockers": [
+      "supabase-temp-present"
+    ],
+    "dryRun": true,
+    "timestamp": "2026-06-21T22:24:37.978Z",
+    "repoRoot": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean"
+  },
+  "evidence": {
+    "repositoryCommit": "CURRENT_COMMIT_PLACEHOLDER",
+    "harnessVersion": "C39-dry-run-v1",
+    "publicToolVersions": {
+      "node": "public-version-placeholder"
+    },
+    "plannedMigrationSkeletonNames": [
+      "001_auth_tenant_core_skeleton.sql",
+      "002_memberships_session_selection_skeleton.sql",
+      "003_rls_helpers_grants_skeleton.sql",
+      "004_academic_core_skeleton.sql",
+      "005_courses_sections_read_slice_skeleton.sql",
+      "006_policy_test_seed_skeleton.sql"
+    ],
+    "plannedAssertionIds": [
+      "required-schemas",
+      "required-tables",
+      "constraints-and-indexes",
+      "rls-enabled",
+      "exact-grants",
+      "safe-functions",
+      "no-anon-grants"
+    ],
+    "plannedPolicySuiteIds": [
+      "auth-context",
+      "membership-lifecycle",
+      "session-selection",
+      "tenant-isolation",
+      "direct-id-denial",
+      "courses-sections",
+      "staff-assignment",
+      "student-enrollment",
+      "guardian-links",
+      "support-denial",
+      "stale-state",
+      "grants-rls",
+      "v1-non-interference"
+    ],
+    "applicationCheckNames": [
+      "typecheck",
+      "test:unit",
+      "build"
+    ],
+    "cleanupStatus": "PLANNED_DRY_RUN_ONLY",
+    "dryRun": true
+  },
+  "evidenceValidation": {
+    "valid": true,
+    "errors": []
+  },
+  "cleanupPlan": {
+    "targetId": "nocturna-c39-dry-run",
+    "targetPath": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean\\outputs\\disposable-db\\c39-dry-run",
+    "dryRun": true,
+    "actions": [
+      {
+        "id": "stop-exact-project",
+        "description": "Plan stopping the exact disposable project.",
+        "targetId": "nocturna-c39-dry-run",
+        "targetPath": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean\\outputs\\disposable-db\\c39-dry-run",
+        "dryRun": true,
+        "safetyCheck": "Verify the project identifier equals the approved target."
+      },
+      {
+        "id": "remove-exact-volumes",
+        "description": "Plan removing volumes owned by the exact disposable project.",
+        "targetId": "nocturna-c39-dry-run",
+        "targetPath": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean\\outputs\\disposable-db\\c39-dry-run",
+        "dryRun": true,
+        "safetyCheck": "Verify every volume label contains the approved target identifier."
+      },
+      {
+        "id": "remove-ephemeral-credentials",
+        "description": "Plan removal of the exact ephemeral credential file.",
+        "targetId": "nocturna-c39-dry-run",
+        "targetPath": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean\\outputs\\disposable-db\\c39-dry-run",
+        "dryRun": true,
+        "safetyCheck": "Verify the file resolves inside the approved disposable target path."
+      },
+      {
+        "id": "remove-raw-evidence",
+        "description": "Plan removal of exact temporary raw evidence logs.",
+        "targetId": "nocturna-c39-dry-run",
+        "targetPath": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean\\outputs\\disposable-db\\c39-dry-run",
+        "dryRun": true,
+        "safetyCheck": "Verify raw logs resolve inside the approved disposable target path."
+      },
+      {
+        "id": "verify-processes-ended",
+        "description": "Plan verification that no target-specific process remains.",
+        "targetId": "nocturna-c39-dry-run",
+        "targetPath": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean\\outputs\\disposable-db\\c39-dry-run",
+        "dryRun": true,
+        "safetyCheck": "Match processes only by the approved target identifier."
+      }
+    ]
+  },
+  "executionNotice": "No service, external command, SQL, migration, database or cleanup action was executed."
+}
