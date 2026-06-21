@@ -171,3 +171,18 @@ A module may be marked ready only when:
 No domain module is ready for remote Supabase integration yet. The strongest foundations are schedule, library, reports, notifications, audit log, settings, and guardian space because they already have explicit read capabilities, but each still lacks approved entity/RLS/index/audit/staging contracts.
 
 The first academic-core readiness work should focus on courses, sections, students, guardians, and enrollments because those relationships determine the safe scope of attendance, evaluations, grades, materials, and reports.
+
+## C34 Remote Schema Inspection Note
+
+- Remote `public` schema inspected read-only/schema-only.
+- No table rows were read and no Supabase write was performed.
+- No migration is approved by this inspection.
+- Auth V2 memberships, roles and session selections are absent remotely.
+- The remote has broad table grants; RLS and grants must be reviewed together.
+- Several RLS-enabled tables have no policy in the snapshot, while some existing
+  policies are permissive or overlapping.
+- Remote/local policy and schema drift blocks readiness.
+
+Result: `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
+
+Next gate: baseline reconciliation plus disposable-database RLS tests.

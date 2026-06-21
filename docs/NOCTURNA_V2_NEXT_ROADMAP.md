@@ -264,3 +264,22 @@ Prove the integrated system safely before production consideration.
 ## Success measure
 
 The roadmap succeeds when Nocturna V2 moves from broad visual coverage to a small number of fully authorized, auditable, tenant-safe workflows—without sacrificing the V1 boundary or creating a large unreviewable database rollout.
+
+## Phase E — C34 Remote Schema Drift Inspection
+
+C34 completed a schema-only inspection of the linked remote `public` schema.
+It confirmed both unversioned remote DDL and missing Auth V2 database objects.
+No rows were read and no remote write or migration was performed.
+
+Next step:
+
+1. C35 local schema baseline/reconciliation draft.
+2. Disposable-database reconstruction.
+3. Remote/local diff review.
+4. Separate forward Auth V2 migration draft.
+5. RLS, grant and V1 regression tests.
+
+Do not execute `db push`, migration application or production integration until
+the baseline and forward draft receive explicit human approval.
+
+Recommendation: `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.

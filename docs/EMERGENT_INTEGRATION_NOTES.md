@@ -50,3 +50,17 @@ STATUS: PENDING_REVIEW
   selections are versioned and policy-tested.
 - Mock-backed modules remain explicit while schema reconciliation is incomplete.
 - No client adapter may use service role or bypass RLS during the transition.
+
+## C34 Remote schema inspection result
+
+- The remote database does not contain `institution_memberships`, `roles`,
+  `membership_session_selections` or `institutions.status`.
+- Auth V2 schema is therefore not remotely available or locally versioned.
+- Remote V1 tables also differ from the checked-in migrations.
+- Frontend modules must remain explicitly mock-backed until baseline
+  reconciliation and real adapters are separately approved.
+- V1 profile claims remain a temporary bridge, not final authorization
+  authority.
+- No browser code may receive `service_role` credentials.
+- Real adapters remain blocked until active membership, role and session
+  selection are DB-backed, server-validated and RLS-tested.
