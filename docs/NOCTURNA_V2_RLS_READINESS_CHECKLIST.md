@@ -210,3 +210,20 @@ production cutover until retention and migration scope are approved.
   authority tests are approved.
 - Policy tests must not depend on copied production records.
 - Any future aggregate or sample audit requires separate explicit approval.
+
+## C37 Clean Architecture Note
+
+- The clean Supabase V2 architecture, core schema contract and future migration
+  order are drafted.
+- Deny-by-default grants/RLS, per-session active membership, synthetic seed and
+  database policy-test plans are documented.
+- The SQL artifact is fully commented, review-only and is not a migration.
+- No project was created, no SQL was executed and no real row was read or
+  copied.
+- No module is ready for real data: exact migration SQL, disposable
+  reconstruction and executed grants/RLS evidence remain missing.
+- Courses + Sections read-only remains the proposed first slice after those
+  gates pass.
+
+Next gate: a disposable database reconstruction plan and reviewable migration
+draft skeletons, followed by synthetic grants/RLS test evidence.

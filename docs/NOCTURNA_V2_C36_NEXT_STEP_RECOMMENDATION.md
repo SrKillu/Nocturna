@@ -60,3 +60,21 @@ Blocked:
 - permission to create clean staging in a future batch;
 - explicit authorization for any Level 1+ audit;
 - separate approval for export/migration or retirement.
+
+## C37 Follow-up
+
+C37 produced a clean Supabase V2 architecture, core schema contract, future
+migration sequence, deny-by-default RLS/grants design, synthetic seed plan,
+database policy-test plan, environment/CI boundaries, review-only commented SQL
+outline and server-adapter boundary.
+
+It did not create a Supabase project, execute SQL, apply migrations, read rows
+or copy legacy data. The C36 retention gate remains active.
+
+Recommended next step:
+
+`C37_RECOMMEND_C38_DISPOSABLE_DB_RECONSTRUCTION_PLAN`
+
+C38 should define how an empty ephemeral database will be rebuilt and tested,
+and may prepare reviewable migration skeletons only if separately approved.
+Clean staging creation, remote changes and real-data movement remain blocked.
