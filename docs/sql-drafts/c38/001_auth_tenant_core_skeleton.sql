@@ -1,0 +1,46 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL SKELETON. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- PURPOSE
+-- Define the future Auth/tenant foundation only after harness approval.
+--
+-- PROPOSED SCHEMAS
+-- public or another approved exposed application schema.
+-- private schema for non-exposed authorization context.
+--
+-- PROPOSED TABLES
+-- institutions: opaque id, stable slug, display name, lifecycle, timestamps.
+-- profiles: id equal to auth.users id, global lifecycle, minimal profile fields.
+-- roles: stable RoleKey rows for owner/admin/teacher/assistant/student/guardian/support.
+-- audit_events: deferred or minimal security-event boundary.
+--
+-- PROPOSED CONSTRAINTS
+-- Institution lifecycle accepts active/trial/suspended/archived.
+-- Profile id references auth.users id.
+-- Role key is unique and immutable.
+-- Required fields are not nullable.
+--
+-- PROPOSED INDEXES
+-- Unique institution slug.
+-- Profile lifecycle access path only if demonstrated.
+-- Audit ordering/tenant path deferred to its reviewed package.
+--
+-- PROPOSED RLS OUTLINE
+-- Enable RLS on every exposed tenant table.
+-- Anonymous access denied.
+-- Profile self projection is minimal.
+-- Institution read requires current validated membership in a later package.
+--
+-- PROPOSED GRANTS OUTLINE
+-- No implicit broad table privileges.
+-- Exact authenticated reads are introduced with policies.
+-- No browser mutation privilege in the first slice.
+--
+-- TEST NOTES
+-- Assert required objects, constraints, RLS status and absence of anonymous grants.
+-- Assert inactive profile and institution states fail closed.

@@ -1,0 +1,44 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL SKELETON. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- PURPOSE
+-- Describe deterministic synthetic fixture relationships and policy assertions.
+--
+-- PROPOSED SYNTHETIC TENANTS
+-- Alpha Institute: active positive/negative relationship matrix.
+-- Beta Institute: cross-tenant controls.
+-- Gamma Institute: suspended lifecycle denial.
+--
+-- PROPOSED ACTORS
+-- owner, admin, teacher, assistant, student, guardian and support labels.
+-- one Alpha/Beta multi-membership actor with independent sessions A and B.
+-- suspended/left membership and inactive-profile labels.
+--
+-- PROPOSED RELATIONSHIPS
+-- Teacher/assistant assigned only to Alpha Section A1.
+-- Student enrolled only in Alpha Section A1.
+-- Guardian linked only to the approved Alpha student.
+-- Support has no broad academic relationship.
+--
+-- FIXTURE RULES
+-- Synthetic Auth users are provisioned at runtime outside migrations.
+-- No real email, password, identifier, file or row sample.
+-- Credentials are ephemeral and never logged.
+-- Domain fixture IDs may be deterministic only inside the disposable target.
+--
+-- PROPOSED TEST NOTES
+-- Auth context and lifecycle.
+-- Session A/B isolation.
+-- Cross-tenant and direct-ID denial.
+-- Assignment, enrollment and guardian-link scope.
+-- Grants plus RLS and policy recursion.
+-- Stale state after revocation.
+--
+-- EVIDENCE NOTES
+-- Emit test IDs, synthetic actor labels and pass/fail only.
+-- Do not emit full rows, credentials or connection parameters.

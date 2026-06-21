@@ -1,0 +1,42 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL SKELETON. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- PURPOSE
+-- Establish current tenant/role authority and per-session active selection.
+--
+-- PROPOSED TABLES
+-- institution_memberships: institution, profile, role, lifecycle and timestamps.
+-- private.membership_session_selections: session, profile, membership and lifecycle.
+--
+-- PROPOSED CONSTRAINTS
+-- Membership references institution/profile/role.
+-- Membership lifecycle accepts active/invited/suspended/left.
+-- Selection lifecycle accepts active/revoked/expired.
+-- Current selection uniqueness is scoped to one session.
+-- Composite relationships prove membership/profile/institution consistency.
+--
+-- PROPOSED INDEXES
+-- Membership by profile/status and institution/status.
+-- Selection by session/status and membership/status.
+-- Foreign-key columns receive explicit indexes where access paths require them.
+--
+-- PROPOSED RLS OUTLINE
+-- Membership self-discovery is minimal and current-state aware.
+-- Selection belongs to auth.uid and current JWT session_id.
+-- Non-active membership/profile/institution confers no context.
+-- Direct browser mutation of selection is denied.
+--
+-- PROPOSED GRANTS OUTLINE
+-- Selection table remains non-exposed/private when possible.
+-- Exact helper/server flow only for selection mutation.
+-- No anonymous privilege.
+--
+-- TEST NOTES
+-- Multi-membership session A/B isolation.
+-- Foreign selector, stale session and suspended/left membership denial.
+-- Client institution/role/capability claims are not authority.

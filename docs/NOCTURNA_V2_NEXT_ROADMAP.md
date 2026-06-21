@@ -343,3 +343,25 @@ Recommended next batch:
 
 C38 should define the ephemeral reconstruction harness and reviewable migration
 skeleton boundaries before any staging project or real adapter is authorized.
+
+## C38 Disposable DB Reconstruction Plan
+
+C38 defines the future empty-database lifecycle:
+
+- isolated disposable-environment preflight;
+- deterministic migration application;
+- runtime-only synthetic Auth provisioning and domain seed;
+- exact schema/grant/RLS assertions;
+- policy and application checks;
+- redacted evidence;
+- target-verified cleanup and destruction.
+
+Six SQL skeletons remain fully commented and review-only. C38 did not start a
+database, execute SQL, create a project or create executable migrations.
+
+Recommended next batch:
+
+`C38_RECOMMEND_C39_DISPOSABLE_DB_HARNESS_IMPLEMENTATION`
+
+C39 should implement dry-run-first orchestration, isolation, redaction and
+cleanup controls before migration SQL is made executable.

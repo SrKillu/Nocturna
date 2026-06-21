@@ -81,3 +81,22 @@ Future production requires demonstrated recovery objectives and rollback/cutover
 approval.
 
 Verdict: `C37_ENVIRONMENT_CI_PLAN_DRAFTED`.
+
+## C38 Reconstruction Follow-up
+
+C38 refines the disposable CI stage into an explicit state machine with
+preflight, start, migrate, synthetic Auth/domain seed, assertions, policy tests,
+application checks, redacted evidence and verified destruction.
+
+Future CI requirements:
+
+- pinned CLI/container versions;
+- no linked or remote project configuration;
+- unique disposable project identifier;
+- exact schema/grant/RLS manifests;
+- allowlisted evidence fields and secret-pattern scanning;
+- cleanup that targets only the verified harness instance;
+- failure on incomplete cleanup or nondeterministic reconstruction.
+
+C38 does not execute this pipeline. Harness implementation and local stack
+startup require future approval.

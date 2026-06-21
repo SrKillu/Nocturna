@@ -227,3 +227,19 @@ production cutover until retention and migration scope are approved.
 
 Next gate: a disposable database reconstruction plan and reviewable migration
 draft skeletons, followed by synthetic grants/RLS test evidence.
+
+## C38 Disposable Reconstruction Note
+
+- The disposable reconstruction lifecycle, harness components, migration
+  skeleton boundary and cleanup policy are drafted.
+- Schema assertions now cover exact objects, RLS, grants, function safety,
+  extensions and Data API exposure.
+- Synthetic Auth fixtures, policy-suite execution and evidence redaction are
+  specified.
+- Six SQL skeletons are fully commented and are not migrations.
+- No database was started and no policy was executed.
+- No module is ready for real data because executed reconstruction and policy
+  evidence still do not exist.
+
+Next gate: implement and review a dry-run-first disposable harness, then obtain
+separate approval to start local Supabase and test executable migration drafts.
