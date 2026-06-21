@@ -174,3 +174,25 @@ sin inspección y no se infiere.
 6. Adoptar contexto y policies V2 por slice.
 
 **C33 verdict:** `C33_AUTH_V2_SCHEMA_DRIFT_CONFIRMED`.
+
+## C34 Remote Schema Drift Inspection Update
+
+C34 completed a linked, schema-only remote dump without reading table rows or
+executing SQL writes.
+
+- Remote Auth V2 tables `institution_memberships`, `roles`,
+  `role_capabilities` and `membership_session_selections` are absent.
+- `institutions.status` is absent.
+- Remote `profiles`, `courses` and `enrollments` exist but differ from local
+  migrations in nullability, columns, constraints, indexes or policies.
+- `course_sections`, `final_grades`, `materials` and `messages` exist remotely
+  without a creating migration in `supabase/migrations`.
+- The remote remains V1-shaped around profile tenant/role JWT claims.
+
+The remote/local/runtime difference is now confirmed rather than inferred.
+Before any real migration, prepare a local baseline/reconciliation package and
+test it in a disposable database.
+
+**C34 verdict:** `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
+
+**C35 recommendation:** `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.

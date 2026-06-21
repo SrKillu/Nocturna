@@ -92,3 +92,27 @@ selection porque no existe una representación DB versionada por sesión.
 El inventario local está completo para los archivos permitidos, pero confirma
 drift entre migrations y runtime. No se puede declarar el esquema ejecutable ni
 equivalente al remoto.
+
+## C34 Remote Verification Update
+
+The schema-only remote inspection confirms and expands the C33 inventory:
+
+| Object | Remote | Local migrations | Runtime/contract | Decision |
+|---|---:|---:|---|---|
+| `institution_memberships` | No | No | Runtime-required | Missing, critical |
+| `roles` | No | No | Runtime-required | Missing, critical |
+| `role_capabilities` | No | No | TypeScript matrix for now | Keep deferred |
+| `membership_session_selections` | No | No | C32/C33 contract | Missing |
+| `institutions.status` | No | No | Runtime-required | Missing, critical |
+| `profiles` | Yes | Yes | V1 bridge | Remote/local shape differs |
+| `courses` | Yes | Yes | V1 bridge | Remote/local shape differs |
+| `enrollments` | Yes | Yes | V1 bridge | `created_at` remote vs `enrolled_at` local |
+| `academic_terms` | No | No | Future contract | Missing |
+| exact `sections` | No | No | Future contract | `course_sections` is not equivalent |
+| `section_staff` | No | No | Future contract | Missing |
+| `students` | No | No | Decision pending | V1 profile convention only |
+
+The remote uses the V1 `user_role` enum and access-token hook. It does not
+contain the database authority required by Auth V2.
+
+**C34 verdict:** `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.

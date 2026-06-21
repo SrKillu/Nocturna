@@ -42,3 +42,31 @@ STATUS: PENDING_REVIEW
 ## Veredicto
 
 `C33_BLOCKERS_REDUCED_BUT_NOT_READY_FOR_MIGRATION`
+
+## C34 Blocker Status Update
+
+### Reduced
+
+- Remote drift is no longer unknown.
+- Presence/absence of the critical Auth V2 objects is confirmed.
+- The V1 remote role/tenant helper model is documented.
+- A schema-only evidence snapshot now exists.
+
+### Still blocking
+
+- `institution_memberships`, `roles` and session selections are absent.
+- `institutions.status` is absent.
+- No executable, reviewed migration reconciles remote and local state.
+- No disposable-database reconstruction or RLS regression suite exists.
+- Exact status vocabularies and V1-to-V2 backfill remain unapproved.
+
+### Increased
+
+- Remote-only tables prove unversioned DDL history.
+- Shared V1 tables differ from migrations in columns, nullability, constraints,
+  indexes and policies.
+- Broad grants and policy differences require a joint privilege/RLS review.
+
+**C34 decision:** `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
+
+**Next:** `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.
