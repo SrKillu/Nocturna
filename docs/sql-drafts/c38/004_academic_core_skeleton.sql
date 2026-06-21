@@ -1,0 +1,50 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL SKELETON. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- PURPOSE
+-- Define normalized academic relationships after Auth context is proven.
+--
+-- PROPOSED TABLES
+-- academic_terms
+-- courses
+-- sections
+-- section_staff
+-- students
+-- guardian_links
+-- enrollments
+--
+-- PROPOSED CONSTRAINTS
+-- Every academic row has an explicit institution path.
+-- Course and term share institution with section.
+-- Membership and section share institution with section_staff.
+-- Student, section and term share institution with enrollment.
+-- Guardian membership and student share institution.
+-- Dates/lifecycles use reviewed checks and required nullability.
+--
+-- PROPOSED INDEXES
+-- Explicit indexes on foreign keys.
+-- Institution/term/status course and section lists.
+-- Exact active assignment, enrollment and guardian-link paths.
+-- Deterministic list indexes include a primary-key tie breaker.
+--
+-- PROPOSED RLS OUTLINE
+-- Owner/admin same active institution.
+-- Teacher/assistant exact active section assignment.
+-- Student exact active enrollment.
+-- Guardian active link to approved student projection.
+-- Support denied without separately approved scope.
+-- Cross-tenant direct identifiers return no rows.
+--
+-- PROPOSED GRANTS OUTLINE
+-- Read-only authenticated operations only for the first approved slice.
+-- Relationship tables expose minimal projections.
+-- No anonymous or browser mutation grants.
+--
+-- TEST NOTES
+-- Alpha/Beta isolation, sibling-section denial and lifecycle revocation.
+-- Test list filters and valid out-of-scope direct identifiers separately.

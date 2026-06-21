@@ -93,3 +93,21 @@ rows.
 - Human review accepts the evidence.
 
 Verdict: `C37_DB_POLICY_TEST_PLAN_DRAFTED`.
+
+## C38 Execution Follow-up
+
+C38 maps these suites into a future disposable execution order:
+
+1. schema/grant assertions;
+2. context helpers;
+3. membership/session lifecycle;
+4. tenant list and direct-ID isolation;
+5. staff/student/guardian relationships;
+6. stale-state transitions;
+7. grants and mutation denial;
+8. V1/application regression.
+
+C38 does not execute any suite or start a database. Future evidence records only
+suite/test IDs, synthetic labels and pass/fail results. Any cross-tenant access,
+unexpected grant, recursion, stale-state authorization, secret emission or
+cleanup failure blocks promotion.

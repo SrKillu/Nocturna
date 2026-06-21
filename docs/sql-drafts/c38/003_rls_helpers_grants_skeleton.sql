@@ -1,0 +1,48 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL SKELETON. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- PURPOSE
+-- Define fail-closed context helpers, exact grants and policy foundations.
+--
+-- PROPOSED HELPERS
+-- current_profile_id
+-- current_session_id
+-- current_active_membership_id
+-- current_active_institution_id
+-- current_role_key
+-- has_capability
+--
+-- HELPER RULES
+-- Prefer security invoker.
+-- Return scalar identifiers/booleans only.
+-- Use current DB lifecycle state.
+-- Do not accept client tenant authority.
+-- Keep private helpers outside exposed schemas.
+-- Any exceptional privileged helper uses fixed search_path and minimum execute roles.
+--
+-- PROPOSED RLS OUTLINE
+-- Context policies do not query academic tables.
+-- Missing/inconsistent context returns false or null.
+-- Policies target explicit database roles.
+-- Update policies, when later introduced, require both row visibility and new-row checks.
+--
+-- PROPOSED GRANTS OUTLINE
+-- Revoke PUBLIC execute from privileged helpers.
+-- Anonymous core access remains absent.
+-- Authenticated grants are operation-specific and paired with RLS.
+-- Data API exposure is explicit rather than inherited from defaults.
+--
+-- PROPOSED ASSERTIONS
+-- Function owner, schema, volatility, security mode and fixed search_path.
+-- Exact execute ACL.
+-- RLS enabled on exposed tables.
+-- No unexpected anonymous privileges.
+--
+-- TEST NOTES
+-- Helper isolation, policy recursion and stale-state rejection.
+-- Confirm table owner/test role behavior does not mask RLS defects.

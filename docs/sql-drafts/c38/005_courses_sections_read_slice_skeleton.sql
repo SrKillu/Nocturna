@@ -1,0 +1,43 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL SKELETON. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- PURPOSE
+-- Narrow the first real-data candidate to Courses + Sections read-only.
+--
+-- PROPOSED READ CONTRACT
+-- List authorized courses and sections with deterministic pagination.
+-- Read one authorized course/section projection.
+-- Return only fields needed by existing V2 view models.
+-- Preserve safe not-found behavior for absent and unauthorized identifiers.
+--
+-- PROPOSED OBJECTS
+-- Prefer direct table queries through RLS.
+-- Any view must be security-invoker where supported and explicitly granted.
+-- Any helper remains scalar and non-row-returning unless separately reviewed.
+--
+-- PROPOSED INDEXES
+-- Course list by institution/status/code/id.
+-- Section list by institution/term/status/code/id.
+-- Assignment and enrollment lookups required by policy predicates.
+--
+-- PROPOSED RLS OUTLINE
+-- Owner/admin same active institution.
+-- Teacher/assistant exact assignment.
+-- Student only after enrollment suite passes.
+-- Guardian/support remain denied unless explicitly approved.
+--
+-- PROPOSED GRANTS OUTLINE
+-- Authenticated SELECT only on approved objects.
+-- No INSERT, UPDATE or other mutation operation.
+-- Anonymous access absent.
+--
+-- TEST NOTES
+-- Direct cross-tenant UUID and same-tenant sibling section denial.
+-- Stable ordering and minimal projection.
+-- Query-plan evidence for list and direct-object access.
+-- Feature flag remains off until all blocking tests pass.

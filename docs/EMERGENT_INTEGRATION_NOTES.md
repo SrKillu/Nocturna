@@ -108,3 +108,15 @@ STATUS: PENDING_REVIEW
 - Courses + Sections read-only is the first recommended real adapter slice.
 - Write adapters remain blocked until read policies and negative relationship
   tests pass.
+
+## C38 Disposable reconstruction impact
+
+- V2 UI remains mock-backed; C38 creates no real adapter.
+- No clean staging or real/legacy data is introduced.
+- The future disposable harness will provide schema, grants/RLS and relationship
+  evidence required before adapters can be considered.
+- Courses + Sections read-only remains feature-flagged and blocked until
+  reconstruction passes repeatedly.
+- Client code still cannot assert tenant, role or relationship authority.
+- No privileged service credential may enter browser code, logs or evidence.
+- C38 does not change runtime, endpoints, middleware or V1.
