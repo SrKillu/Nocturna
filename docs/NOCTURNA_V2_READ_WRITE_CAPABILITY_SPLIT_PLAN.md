@@ -245,3 +245,5 @@ Human review should approve:
 5. Which actions require immutable audit history.
 
 Until those decisions are approved, this document is a plan and must not be treated as an implemented authorization model.
+
+C27 added the first safe read capability vocabulary in code. These capabilities are not yet used for route admission; C28 should adopt them without changing effective role access.
