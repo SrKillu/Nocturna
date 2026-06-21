@@ -70,6 +70,12 @@ Design the tenant-safe academic data foundation without applying unreviewed migr
 
 ### Work
 
+- C29 domain data contract inventory completed before any schema/RLS draft:
+  - domain entities, identifiers, tenant relationships and sensitive fields documented
+  - conceptual entity relationship inventory documented
+  - future operation contracts documented
+  - first vertical-slice candidates compared, with Courses + Sections read-only recommended
+- C30 must use the C29 contracts to produce a `PENDING_REVIEW` schema/RLS draft; it must not treat conceptual entity names or indexes as approved executable SQL.
 - Review the current Supabase schema and migration history without changing the remote project.
 - Require an approved capability-to-RLS operation mapping before drafting each domain migration.
 - Model institutions, terms, memberships, roles, students, guardians, staff, courses, sections, groups, enrollments, and assignments.
