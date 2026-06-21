@@ -1,0 +1,212 @@
+-- STATUS: PENDING_REVIEW
+-- REVIEW-ONLY SQL DRAFT. DO NOT APPLY.
+-- This file is not a Supabase migration.
+-- Do not copy to supabase/migrations without human review.
+-- Do not execute against local, staging or remote Supabase.
+-- No real data is included.
+-- No secrets are included.
+--
+-- C37 CLEAN SUPABASE V2 SCHEMA OUTLINE
+-- Every line in this file is a comment. It intentionally contains no executable
+-- statement. Exact schemas, types, constraints, policies and grants require
+-- human review and disposable-database tests.
+--
+-- ---------------------------------------------------------------------------
+-- A. PROPOSED BASE TYPES
+-- ---------------------------------------------------------------------------
+-- Candidate institution lifecycle:
+--   active | trial | suspended | archived
+-- Candidate membership lifecycle:
+--   active | invited | suspended | left
+-- Candidate term lifecycle:
+--   draft | active | closed | archived
+-- Candidate enrollment lifecycle:
+--   invited | active | withdrawn | completed
+-- Candidate selection lifecycle:
+--   active | revoked | expired
+--
+-- Decision gate: compare checked text, lookup tables and PostgreSQL enums before
+-- choosing an implementation. Role keys remain stable rows, not an enum.
+--
+-- ---------------------------------------------------------------------------
+-- B. AUTH AND TENANT CORE TABLE OUTLINES
+-- ---------------------------------------------------------------------------
+-- institutions
+--   id uuid primary key
+--   stable_slug text unique
+--   display_name text
+--   status institution lifecycle
+--   created_at/updated_at timestamptz
+--
+-- profiles
+--   id uuid primary key referencing auth.users(id)
+--   display_name text
+--   status/profile lifecycle
+--   created_at/updated_at timestamptz
+--   No final V2 role or institution authority columns.
+--
+-- roles
+--   id uuid primary key
+--   key text unique and immutable
+--   display_name text
+--   Proposed keys: owner, admin, teacher, assistant, student, guardian, support.
+--
+-- institution_memberships
+--   id uuid primary key
+--   institution_id uuid
+--   profile_id uuid
+--   role_id uuid
+--   status membership lifecycle
+--   started_at/ended_at/created_at/updated_at timestamptz
+--   Candidate composite keys prove institution consistency.
+--   Current-membership uniqueness requires lifecycle review.
+--
+-- private.membership_session_selections
+--   id uuid primary key
+--   session_id uuid
+--   profile_id uuid
+--   membership_id uuid
+--   status selection lifecycle
+--   selected_at/expires_at/revoked_at/updated_at timestamptz
+--   One current selection per session.
+--   Membership ownership and current lifecycle must be revalidated.
+--
+-- audit_events
+--   id uuid primary key
+--   institution_id uuid nullable only for approved global security events
+--   actor_profile_id uuid
+--   actor_membership_id uuid
+--   action_key text
+--   target_type/target_id text or reviewed typed structure
+--   redacted_metadata jsonb
+--   occurred_at timestamptz
+--   Append-oriented; no browser mutation grants.
+--
+-- ---------------------------------------------------------------------------
+-- C. ACADEMIC CORE TABLE OUTLINES
+-- ---------------------------------------------------------------------------
+-- academic_terms
+--   id/institution_id uuid
+--   code/name text
+--   starts_on/ends_on date with ordered-date constraint
+--   status term lifecycle
+--   unique institution + code
+--
+-- courses
+--   id/institution_id uuid
+--   code/name/description text
+--   status reviewed course lifecycle
+--   unique institution + code
+--
+-- sections
+--   id/institution_id/course_id/academic_term_id uuid
+--   section_code/title/schedule_label/room_label text
+--   status reviewed section lifecycle
+--   Composite references prove course and term share institution.
+--
+-- section_staff
+--   id/institution_id/section_id/membership_id uuid
+--   assignment_role teacher | assistant | approved scoped support
+--   status and assignment timestamps
+--   Composite references prove membership and section share institution.
+--
+-- students
+--   id/institution_id uuid
+--   profile_id uuid nullable
+--   student_code text
+--   status reviewed student lifecycle
+--   unique institution + student_code
+--
+-- guardian_links
+--   id/institution_id/student_id/guardian_membership_id uuid
+--   relationship_key/status/verified_at
+--   Composite references prove one institution.
+--
+-- enrollments
+--   id/institution_id/academic_term_id/section_id/student_id uuid
+--   status enrollment lifecycle
+--   enrolled_at/ended_at timestamptz
+--   Composite references prove term, section and student share institution.
+--
+-- ---------------------------------------------------------------------------
+-- D. PROPOSED INDEX FAMILIES
+-- ---------------------------------------------------------------------------
+-- Context lookups:
+--   profiles by id/status
+--   memberships by profile/status and institution/status
+--   selections by session/status and membership/status
+-- Relationship lookups:
+--   sections by institution/term/status and institution/course/status
+--   section_staff by membership/section/status and section/status
+--   students by institution/profile and institution/student_code
+--   guardian_links by guardian membership/student/status
+--   enrollments by student/section/status and section/status
+-- Deterministic lists include the final primary-key tie breaker.
+-- Query-plan evidence is required before index approval.
+--
+-- ---------------------------------------------------------------------------
+-- E. RLS HELPER OUTLINES
+-- ---------------------------------------------------------------------------
+-- Candidate scalar helpers:
+--   current_profile_id()
+--   current_session_id()
+--   current_active_membership_id()
+--   current_active_institution_id()
+--   current_role_key()
+--   has_capability(capability_key)
+--   is_assigned_to_section(section_id)
+--   is_enrolled_in_section(section_id)
+--   is_guardian_linked_to_student(student_id)
+-- Helpers fail closed and do not accept tenant authority from the client.
+-- Security invoker is preferred.
+--
+-- ---------------------------------------------------------------------------
+-- F. POLICY OUTLINES
+-- ---------------------------------------------------------------------------
+-- institutions:
+--   authenticated actor may read the current active institution only.
+-- profiles:
+--   self-safe projection; related projections require explicit views/policies.
+-- memberships:
+--   actor may read own memberships; administration requires same tenant and
+--   approved capability. Non-active memberships grant no tenant authority.
+-- selections:
+--   current user/session context only; no direct browser mutation.
+-- courses/sections:
+--   owner/admin same active institution;
+--   teacher/assistant exact active section assignment;
+--   student exact active enrollment after student policy approval;
+--   guardian/support denied unless separately approved.
+-- relationship tables:
+--   expose only the minimum self/relationship projection.
+-- audit:
+--   no client writes; narrow reviewed read projections.
+--
+-- ---------------------------------------------------------------------------
+-- G. GRANT OUTLINES
+-- ---------------------------------------------------------------------------
+-- anon:
+--   no privileges on tenant/auth/academic core tables.
+-- authenticated:
+--   only operations with reviewed RLS; first slice is read-only.
+-- PUBLIC:
+--   no execute on privileged private helpers.
+-- operational server/job boundary:
+--   exact privileges only; privileged credentials never enter browser code.
+-- Grants and policies are tested together.
+--
+-- ---------------------------------------------------------------------------
+-- H. SYNTHETIC SEED OUTLINE
+-- ---------------------------------------------------------------------------
+-- Alpha Institute and Beta Institute are invented tenants.
+-- Synthetic actors cover owner/admin/teacher/assistant/student/guardian/support.
+-- A multi-membership user has session A selecting Alpha and session B selecting
+-- Beta. Additional fixtures cover suspended/left membership, suspended
+-- institution, exact staff assignment, enrollment and guardian link.
+-- No real identity, email, legacy ID, file or credential belongs in seed.
+--
+-- ---------------------------------------------------------------------------
+-- I. FIRST ADAPTER SLICE
+-- ---------------------------------------------------------------------------
+-- Courses + Sections read-only follows only after clean reconstruction and all
+-- required grants/RLS tests pass. No write adapter is proposed by this draft.

@@ -320,3 +320,26 @@ Recommended next batch:
 C37 Clean Supabase V2 Architecture Draft with a legacy-retention gate.
 
 `C36_RECOMMEND_C37_CLEAN_SUPABASE_V2_ARCHITECTURE_DRAFT_WITH_LEGACY_RETENTION_GATE`
+
+## C37 Clean Supabase V2 Architecture Draft
+
+C37 converts the C35/C36 decisions into a review-only clean V2 design:
+
+- migration-first Auth/tenant and academic-core contracts;
+- deny-by-default grants and relationship-aware RLS;
+- per-session active membership selection;
+- synthetic Alpha/Beta fixtures;
+- disposable-database policy-test and CI reconstruction plans;
+- a server-only, feature-flagged adapter boundary;
+- Courses + Sections read-only as the first proposed integration slice.
+
+Clean staging remains synthetic-only. C37 did not create a Supabase project,
+execute SQL, apply migrations, read rows, copy legacy data or change runtime.
+Legacy remains behind the C36 retention gate.
+
+Recommended next batch:
+
+`C37_RECOMMEND_C38_DISPOSABLE_DB_RECONSTRUCTION_PLAN`
+
+C38 should define the ephemeral reconstruction harness and reviewable migration
+skeleton boundaries before any staging project or real adapter is authorized.

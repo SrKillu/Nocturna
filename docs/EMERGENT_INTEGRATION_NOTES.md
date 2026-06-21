@@ -88,3 +88,23 @@ STATUS: PENDING_REVIEW
 - Legacy data must not become V2 authority by convenience.
 - Any future row-level audit, export or migration requires a separately approved
   scope.
+
+## C37 Clean architecture impact
+
+- The frontend, routes, view models, role/capability contracts and state
+  handling remain preserved.
+- V2 UI remains mock-backed until a clean disposable database is reconstructed
+  and policy tests pass.
+- Real adapters are server-side and feature-flagged; flags never bypass Auth V2,
+  capabilities or RLS.
+- Active membership is derived from the current user, Supabase `session_id` and
+  current DB lifecycle state.
+- The browser never supplies authoritative `institution_id`, role, assignment
+  or enrollment scope.
+- Direct object access is authorized server-side and maps out-of-scope objects
+  to safe not-found behavior.
+- No legacy rows, identifiers or files are copied into clean staging.
+- No browser code may use a privileged service credential.
+- Courses + Sections read-only is the first recommended real adapter slice.
+- Write adapters remain blocked until read policies and negative relationship
+  tests pass.
