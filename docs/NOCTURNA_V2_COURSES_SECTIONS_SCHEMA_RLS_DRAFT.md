@@ -455,3 +455,69 @@ Sources: [Supabase RLS documentation](https://supabase.com/docs/guides/database/
   list/detail contracts remain valid starting points.
 
 **C31 verdict:** `C31_C30_DRAFT_NEEDS_FIXES`.
+
+## C32 Active Membership Context Reconciliation Notes
+
+### Placeholder status
+
+`current_active_membership_id()` remains a placeholder. It is not an approved
+function signature or implementation and must not be copied into a migration.
+
+The replacement contract is defined in
+`NOCTURNA_V2_ACTIVE_MEMBERSHIP_DB_CONTEXT_SPEC.md`:
+
+- identify the authenticated user with `auth.uid()`;
+- identify the current Supabase session with the JWT `session_id`;
+- resolve one active, non-expired selection for that session;
+- join to current profile, membership, institution and role state;
+- derive institution/role/capabilities from DB/configuration, not client input;
+- fail closed on any inconsistency.
+
+### Local schema reconciliation impact
+
+The local migrations contain V1 `institutions`, `profiles`, `courses` and
+course-level `enrollments`, but do not create the `institution_memberships` or
+`roles` tables already queried by Auth V2. They also do not define sections,
+academic terms, students, section staff or per-session selections.
+
+Therefore C30 must not create parallel `memberships`, `profiles`, `courses` or
+`enrollments` objects by assumption. A future schema/context fix pass must first:
+
+1. version/reconcile the real Auth V2 membership and role schema;
+2. define the V1-to-V2 transition for single-tenant profile claims;
+3. evolve existing courses/enrollments without opening a tenant-wide fallback;
+4. add session selection and relationship entities in dependency order.
+
+### Courses and sections RLS impact
+
+- The active institution predicate comes only from the validated membership
+  selected by the current session.
+- Existing V1 `courses_select_tenant` and `enrollments_select_tenant` are too
+  broad for the V2 staff/student matrix.
+- Course visibility through one assignment does not authorize sibling sections.
+- Every direct ID query must re-resolve current context and relationship.
+- Role/capability claims in a stale JWT cannot override current DB state.
+- Helpers must follow an acyclic dependency graph; no `SECURITY DEFINER`
+  shortcut is approved.
+
+### Student policy gate
+
+Student policies may be included only after:
+
+- students/enrollments are reconciled with the existing course-level enrollment;
+- active membership works per session;
+- exact section enrollment, lifecycle and tenant constraints exist;
+- the C31/C32 negative matrix runs successfully.
+
+Otherwise student remains mock-backed for the first real-data slice.
+
+### Remaining blockers before real SQL
+
+- Missing local migrations for Auth V2 membership/role tables.
+- No approved session-selection table or grants.
+- No approved strict `auth.sessions` validation strategy.
+- V1/V2 profile, role, course and enrollment cutover unresolved.
+- Tenant-equality constraints and non-recursive helpers untested.
+- No local DB policy evidence, query plans or rollback rehearsal.
+
+**C32 status:** `C32_ACTIVE_MEMBERSHIP_SPEC_DRAFTED_NOT_APPROVED_FOR_SQL`.

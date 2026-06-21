@@ -189,3 +189,45 @@ Before any real-data UI integration:
   is no partial institution-wide fallback.
 - Revocation cases are exercised in separate requests and documented transaction
   semantics cover changes during a request.
+
+## 11. C32 active-membership reconciliation cases
+
+The complete matrix lives in
+`NOCTURNA_V2_ACTIVE_MEMBERSHIP_POLICY_TEST_MATRIX.md`. Courses + Sections must
+include at least these gates:
+
+| ID | Case | Expected |
+|---|---|---|
+| C32-P01 | One active institution and valid session selection | Only that tenant's authorized rows |
+| C32-P02 | Alpha/Beta memberships; session A=Alpha, B=Beta | Independent tenant results per session |
+| C32-P03 | Change selection in session A | Session B remains unchanged |
+| C32-P04 | Manipulated, missing or other-user selector | Deny; no selection persisted |
+| C32-P05 | Selection expired/revoked | Deny |
+| C32-P06 | Membership suspended/revoked | Current DB state denies despite stale JWT/cookie |
+| C32-P07 | Profile inactive | Deny before domain lookup |
+| C32-P08 | Institution suspended | Deny before domain lookup |
+| C32-P09 | Auth session revoked | Sensitive request denied; selection cannot restore it |
+| C32-P10 | JWT role/tenant/capability stale | Current membership/configuration prevails |
+| C32-P11 | Course ID from other active membership/tenant | Safe not-found |
+| C32-P12 | Membership changes between list and detail | Detail reauthorizes |
+| C32-P13 | Context helpers invoked independently | Fail closed and expose no private rows |
+| C32-P14 | Context + assignment/enrollment helpers | No recursive policy error |
+| C32-P15 | Context table without Data API grant | Not exposed; grants tested separately from RLS |
+
+### C32 seed additions
+
+- One profile with Alpha and Beta memberships.
+- Two simultaneous Supabase session IDs.
+- Per-session selections plus expired/revoked/foreign selectors.
+- Membership/profile/institution status transitions.
+- Stale JWT/cookie fixtures.
+- Course IDs repeated/crossed across tenants.
+
+### C32 acceptance gate
+
+- The schema source for `institution_memberships` and `roles` is versioned.
+- Session selection is keyed by trusted JWT `session_id`.
+- Browser input cannot set institution, role or capabilities as authority.
+- Current DB status is checked on each sensitive query.
+- Helpers and policy tables have an acyclic tested dependency graph.
+- Grants are explicit and context tables are not accidentally Data API-exposed.

@@ -87,6 +87,18 @@ Design the tenant-safe academic data foundation without applying unreviewed migr
   does not mean the policies are executable or approved.
 - C32 may convert C30 into a migration draft only after C31 blockers are resolved
   and approved.
+- C32 active-membership context and local schema reconciliation completed as
+  review-only documentation:
+  - per-session selection keyed by Supabase `session_id` specified
+  - current membership/profile/institution validation rules specified
+  - existing V1 schema and RLS conflicts catalogued
+  - local Auth V2 schema drift identified: membership/role tables used by runtime
+    are absent from migrations
+  - active-membership policy test matrix drafted
+- Because schema reconciliation is `INCOMPLETE_LOCAL_ONLY`, the next step should
+  be a C33 schema/context fix pass that versions/reconciles Auth V2 tables and the
+  V1 transition. C33 must not convert C30 directly to a migration unless those
+  blockers are resolved first.
 - Do not convert C30 into a migration or touch remote Supabase until SQL, policies, seed, rollback and local policy-test evidence receive explicit approval.
 - No `db push`, remote SQL or migration application is permitted without separate
   explicit approval.
