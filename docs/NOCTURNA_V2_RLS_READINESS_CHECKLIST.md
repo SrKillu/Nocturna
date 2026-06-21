@@ -48,6 +48,23 @@ A module is not ready for real Supabase integration merely because its route, mo
 - C30 still has blockers and is **not approved for migration conversion**.
 - No executable migration is approved and no remote Supabase change occurred.
 
+## C32 active membership and schema reconciliation update
+
+- A concrete active-membership DB context specification is drafted around
+  `auth.uid()`, JWT `session_id`, per-session selection and current DB status.
+- A future `membership_session_selections` concept is documented; its final
+  name/schema/grants are not SQL-approved.
+- The active-membership policy test matrix covers multi-device, selector abuse,
+  revocation, inactive profile/institution, stale JWT/cookie and direct IDs.
+- Existing local schema reconciliation is complete for files in the repo but
+  formally `INCOMPLETE_LOCAL_ONLY`: Auth V2 runtime queries
+  `institution_memberships` and `roles` that no local migration creates.
+- Existing V1 courses/enrollments and tenant-wide policies conflict with the
+  relationship-scoped C30 model and require a planned transition.
+- `current_active_membership_id()` remains an identified blocker, now tied to the
+  C32 specification rather than an unspecified placeholder.
+- No executable migration is approved and no remote Supabase change occurred.
+
 Statuses:
 
 - **Done:** present and usable for planning.
