@@ -196,3 +196,27 @@ test it in a disposable database.
 **C34 verdict:** `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
 
 **C35 recommendation:** `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.
+
+## C35 Baseline Reconciliation Update
+
+C35 maps the 17 observed remote public tables, two enums, four functions,
+constraints, indexes, RLS policies and broad grants against local migrations.
+
+Baseline summary:
+
+- 13 remote tables have some local migration source but materially differ;
+- four remote tables are unversioned: `course_sections`, `final_grades`,
+  `materials`, `messages`;
+- no local public table is wholly absent remotely;
+- multiple local functions, triggers, indexes and policies are not evidenced in
+  the C34 public snapshot;
+- Auth V2 roles, memberships, institution status and session selection remain
+  absent.
+
+The reconstruction SQL is a review-only observed-baseline draft. It has not been
+executed and is not approved as a migration.
+
+Auth V2 remains blocked for real integration. The next gate is disposable DB
+reconstruction, metadata comparison and V1/RLS regression testing.
+
+**C35 status:** `C35_BASELINE_RECONCILIATION_DRAFTED`.

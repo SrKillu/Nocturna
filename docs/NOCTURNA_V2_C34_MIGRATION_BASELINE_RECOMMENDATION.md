@@ -12,6 +12,25 @@ Choose **Option B**:
 Final recommendation:
 `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`
 
+## C35 Baseline Reconciliation Follow-up
+
+C35 implemented the recommendation as review-only documentation:
+
+- complete remote public-object inventory;
+- remote/local migration diff matrix;
+- reconstruction draft derived from the C34 snapshot;
+- separate Auth V2 forward migration plan;
+- baseline risk register and owner explanation.
+
+The work confirms Option B. It does not approve SQL or a migration. The next
+safe gate is disposable-database reconstruction and validation.
+
+Follow-up verdicts:
+
+- `C35_BASELINE_RECONCILIATION_DRAFTED`
+- `C35_REMOTE_LOCAL_DIFF_MAPPED`
+- `C35_READY_FOR_DISPOSABLE_DB_RECONSTRUCTION`
+
 ## Why Option B
 
 The remote database is neither equivalent to the checked-in migrations nor

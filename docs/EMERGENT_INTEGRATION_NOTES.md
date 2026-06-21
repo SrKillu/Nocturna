@@ -64,3 +64,15 @@ STATUS: PENDING_REVIEW
 - No browser code may receive `service_role` credentials.
 - Real adapters remain blocked until active membership, role and session
   selection are DB-backed, server-validated and RLS-tested.
+
+## C35 Baseline reconciliation result
+
+- The frontend remains mock-backed for V2 domain data.
+- Real adapters remain blocked.
+- Auth V2 database authority still does not exist in the observed baseline.
+- The C35 SQL artifact is a review-only reconstruction draft, not a migration.
+- V1 profile/JWT claims remain a temporary compatibility bridge, not final V2
+  authority.
+- No browser code may use `service_role`.
+- The next integration gate is disposable-database reconstruction plus
+  RLS/grant and V1 regression tests.

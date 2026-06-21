@@ -283,3 +283,23 @@ Do not execute `db push`, migration application or production integration until
 the baseline and forward draft receive explicit human approval.
 
 Recommendation: `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.
+
+## Phase E — C35 Baseline Reconciliation Draft
+
+C35 completed the review-only remote baseline inventory, remote/local diff
+matrix, reconstruction draft, Auth V2 forward plan and risk register.
+
+Recommended next step: **C36 disposable DB reconstruction and validation**.
+
+C36 should:
+
+1. initialize an isolated local/disposable Supabase-compatible database;
+2. execute only the baseline draft there after explicit batch authorization;
+3. compare reconstructed metadata with C34;
+4. test functions, triggers, grants and RLS;
+5. record every draft correction without touching remote;
+6. decide whether C37 can author an Auth V2 migration draft.
+
+No `db push`, remote migration or production action is authorized.
+
+`C35_READY_FOR_DISPOSABLE_DB_RECONSTRUCTION`

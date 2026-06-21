@@ -186,3 +186,17 @@ The first academic-core readiness work should focus on courses, sections, studen
 Result: `C34_REMOTE_SCHEMA_DRIFT_CONFIRMED`.
 
 Next gate: baseline reconciliation plus disposable-database RLS tests.
+
+## C35 Baseline Reconciliation Note
+
+- A review-only baseline reconstruction draft now represents the observed C34
+  public schema.
+- No executable migration is approved.
+- No SQL was executed and no remote write occurred.
+- Broad grants, default privileges, missing policies and permissive policies
+  remain unresolved risks.
+- RLS/grant behavior must be exercised in a disposable database with positive,
+  negative, cross-tenant and direct-object cases.
+- V1 policy behavior must remain covered while Auth V2 context is introduced.
+
+Readiness remains blocked until C36 reconstruction and policy tests pass.
