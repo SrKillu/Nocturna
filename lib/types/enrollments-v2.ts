@@ -75,7 +75,7 @@ export interface EnrollmentV2FilterState {
 }
 
 export const ENROLLMENTS_V2_CAPABILITIES = [
-  'canManageCourses',
+  'canViewEnrollments',
 ] as const satisfies readonly CapabilityKey[];
 export const ENROLLMENTS_V2_ROLES = [
   'owner',
@@ -89,7 +89,7 @@ export function canAccessEnrollmentsV2(
   return (
     ENROLLMENTS_V2_ROLES.includes(
       roleKey as (typeof ENROLLMENTS_V2_ROLES)[number]
-    ) && capabilities.canManageCourses === true
+    ) && capabilities.canViewEnrollments === true
   );
 }
 

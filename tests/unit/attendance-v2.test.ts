@@ -38,8 +38,9 @@ describe('Attendance V2 foundation', () => {
     );
   });
 
-  it('requires canManageAttendance without granting access through other capabilities', () => {
-    expect(canAccessAttendanceV2({ canManageAttendance: true })).toBe(true);
+  it('requires canViewAttendance without granting access through write capabilities', () => {
+    expect(canAccessAttendanceV2({ canViewAttendance: true })).toBe(true);
+    expect(canAccessAttendanceV2({ canManageAttendance: true })).toBe(false);
     expect(canAccessAttendanceV2({ canManageCourses: true })).toBe(false);
     expect(canAccessAttendanceV2({ canGrade: true })).toBe(false);
     expect(canAccessAttendanceV2({ canSubmit: true })).toBe(false);

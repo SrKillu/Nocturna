@@ -27,20 +27,20 @@ The next safe milestone is not broad database implementation. It is to stabilize
 |---|---|---|---|---|---|---|---|---|
 | V2 entry | `/v2` | Partial | All authenticated memberships | Session and active membership | Redirects to dashboard through the protected V2 layout | Auth and middleware tests | Real session boundary; no domain data | Keep as the single authenticated V2 entry |
 | Dashboard | `/v2/dashboard` | Visual mock | All roles, with role variants | Authenticated membership; no module capability | Dashboard shell, summary cards, work queue, role-aware navigation | `dashboard-v2` types/mocks; no dedicated dashboard unit suite | Mock academic indicators could be mistaken for live data | Define dashboard query contracts and freshness rules |
-| Courses | `/v2/courses` | Visual mock | Owner, admin, teacher, assistant, student | Any of `canManageCourses`, `canGrade`, `canSubmit` | Courses page, filters, cards/table, responsive views | `courses-v2` types/mocks/tests | Read and manage permissions are conflated | Split view/manage capabilities and define course/section contracts |
-| Course workspace | `/v2/courses/[courseId]` | Visual mock | Owner, admin, teacher, assistant, student | Same as courses | Workspace header, overview, roster, activity and state panels; loading/not-found | Shared `courses-v2` types/mocks/tests | Route is typed but entirely fixture-backed | Define course-detail aggregate and membership-scoped access |
-| Students | `/v2/students` | Visual mock | Owner, admin, teacher, assistant | Any of `canManageCourses`, `canGrade` | Student directory, filters, summary, desktop/mobile views | `students-v2` types/mocks/tests | No dedicated student-view capability | Add view/manage distinction and institution scoping |
-| Student profile | `/v2/students/[studentId]` | Visual mock | Owner, admin, teacher, assistant | Same as students | Profile header, academic summary, attendance, guardians and state panels; loading/not-found | Shared `students-v2` types/mocks/tests | Sensitive student data requires field-level policy decisions | Define authorized profile projection by role |
-| Student self view | `/v2/my-space` | Visual mock | Student | `canSubmit`, while excluding managerial capabilities | Student summary, courses, tasks, performance and state panels | `my-space-v2` types/mocks/tests | Capability inference is indirect | Add an explicit student-space access contract |
+| Courses | `/v2/courses` | Visual mock | Owner, admin, teacher, assistant, student | `canViewCourses` | Courses page, filters, cards/table, responsive views | `courses-v2` types/mocks/tests | Route read is separated from course mutation; object scope remains mock-only | Define course/section relationship contracts |
+| Course workspace | `/v2/courses/[courseId]` | Visual mock | Owner, admin, teacher, assistant, student | `canViewCourses` | Workspace header, overview, roster, activity and state panels; loading/not-found | Shared `courses-v2` types/mocks/tests | Route is typed but entirely fixture-backed | Define course-detail aggregate and membership-scoped access |
+| Students | `/v2/students` | Visual mock | Owner, admin, teacher, assistant | `canViewStudents` | Student directory, filters, summary, desktop/mobile views | `students-v2` types/mocks/tests | Route read is explicit; institution and assignment scope remain pending | Define institution/assignment scoping |
+| Student profile | `/v2/students/[studentId]` | Visual mock | Owner, admin, teacher, assistant | `canViewStudentProfiles` | Profile header, academic summary, attendance, guardians and state panels; loading/not-found | Shared `students-v2` types/mocks/tests | Sensitive student data requires field-level policy decisions | Define authorized profile projection by role |
+| Student self view | `/v2/my-space` | Visual mock | Student | `canViewOwnStudentProfile` plus student role | Student summary, courses, tasks, performance and state panels | `my-space-v2` types/mocks/tests | Personal route is explicit; own-record data relationship remains pending | Bind future reads to authenticated student identity |
 | Guardian space | `/v2/guardian-space` | Visual mock | Guardian | `canViewLinkedStudents` plus guardian role | Linked-student summary, progress, attendance, notices and state panels | `guardian-space-v2` types/mocks/tests | Relationship authorization and linked-student RLS are absent | Define guardian relationship and field-level RLS |
-| Attendance | `/v2/attendance` | Visual mock | Owner, admin, teacher, assistant | `canManageAttendance` | Session summary, roster, filters, status controls and states | `attendance-v2` types/mocks/tests | Read and write authority are combined | Separate view/record/correct permissions and define audit rules |
-| Evaluations | `/v2/evaluations` | Visual mock | Owner, admin, teacher, assistant | `canGrade` | Evaluation list, filters, status and summary components | `evaluations-v2` types/mocks/tests | Evaluation design and grade entry share one permission | Define assessment lifecycle and grading permissions |
-| Materials | `/v2/materials` | Visual mock | Owner, admin, teacher, assistant | `canManageMaterials` | Material library, filters, cards/table and states | `materials-v2` types/mocks/tests | No Storage integration or upload policy | Design metadata, Storage paths, quotas, and signed access |
-| Gradebook | `/v2/gradebook` | Visual mock | Owner, admin, teacher, assistant | `canGrade` | Grade matrix, filters, summaries and responsive views | `gradebook-v2` types/mocks/tests | No grading rules, locking, or historical audit | Define grade schema, calculation rules, and immutable history |
+| Attendance | `/v2/attendance` | Visual mock | Owner, admin, teacher, assistant | `canViewAttendance` | Session summary, roster, filters, status controls and states | `attendance-v2` types/mocks/tests | Read admission is separate; record/correct/approve policies remain pending | Define write capabilities and audit rules |
+| Evaluations | `/v2/evaluations` | Visual mock | Owner, admin, teacher, assistant | `canViewEvaluations` | Evaluation list, filters, status and summary components | `evaluations-v2` types/mocks/tests | Route read is separate from authoring and grading | Define assessment lifecycle and write permissions |
+| Materials | `/v2/materials` | Visual mock | Owner, admin, teacher, assistant | `canViewMaterials` | Material library, filters, cards/table and states | `materials-v2` types/mocks/tests | Read admission is separate; no Storage integration or upload policy | Design metadata, Storage paths, quotas, and signed access |
+| Gradebook | `/v2/gradebook` | Visual mock | Owner, admin, teacher, assistant | `canViewGradebook` | Grade matrix, filters, summaries and responsive views | `gradebook-v2` types/mocks/tests | Route read is separate; no grading rules, locking, or historical audit | Define grade schema, write policies, and immutable history |
 | Reports | `/v2/reports` | Visual mock | Owner, admin, teacher, assistant | `canViewReports` plus explicit role restriction | Report catalog, metrics, filters and states | `reports-v2` types/mocks/tests | No query/export contract or large-data strategy | Define report scopes, exports, and asynchronous generation |
-| Certificates | `/v2/certificates` | Visual mock | Owner, admin | `canManageCertificates` | Certificate list, filters, issuance summaries and states | `certificates-v2` types/mocks/tests | No official-document lifecycle, signing, or verification | Define templates, issuance, revocation, and public verification |
-| Staff | `/v2/staff` | Visual mock | Owner, admin | `canManageUsers` | Staff directory, summaries, filters and state components | `staff-v2` types/mocks/tests | User management and staff viewing are conflated | Separate directory viewing from identity/role administration |
-| Enrollments | `/v2/enrollments` | Visual mock | Owner, admin | `canManageCourses` plus explicit role restriction | Enrollment queue, filters, summaries and states | `enrollments-v2` types/mocks/tests | No enrollment lifecycle or concurrency rules | Define application, enrollment, withdrawal, and transfer states |
+| Certificates | `/v2/certificates` | Visual mock | Owner, admin | `canViewCertificates` plus explicit role restriction | Certificate list, filters, issuance summaries and states | `certificates-v2` types/mocks/tests | Route read is separate; no official-document lifecycle, signing, or verification | Define templates, issuance, revocation, and public verification |
+| Staff | `/v2/staff` | Visual mock | Owner, admin | `canViewStaff` plus explicit role restriction | Staff directory, summaries, filters and state components | `staff-v2` types/mocks/tests | Directory read is separate from identity/role administration | Define assignment and identity write contracts |
+| Enrollments | `/v2/enrollments` | Visual mock | Owner, admin | `canViewEnrollments` plus explicit role restriction | Enrollment queue, filters, summaries and states | `enrollments-v2` types/mocks/tests | Route read is separate; no enrollment lifecycle or concurrency rules | Define application, enrollment, withdrawal, and transfer states |
 | Schedule | `/v2/schedule` | Visual mock | Owner, admin, teacher, assistant | `canViewSchedule` | Calendar/list views, filters, event cards and states | `schedule-v2` types/mocks/tests | Read access is explicit; schedule management remains undefined | Add schedule management capability and conflict rules |
 | Library | `/v2/library` | Visual mock | Owner, admin, teacher, assistant | `canAccessLibrary` | Catalog, circulation summaries, filters and states | `library-v2` types/mocks/tests | Read access is explicit; circulation authority remains undefined | Add library management capability and loan lifecycle |
 | Institution settings | `/v2/settings` | Visual mock | Owner, admin | `canViewInstitutionSettings` plus explicit role restriction | Settings sections, institution profile, preferences, integrations and states | `settings-v2` types/mocks/tests | Read-only visual contract; no persistence or separate write capability | Design read/write settings capabilities and configuration schema |
@@ -83,6 +83,18 @@ The matrix reflects the current navigation and route contracts, not a proposed f
 | `canAccessLibrary` | Yes | Yes | Yes | Yes | No | No | No |
 | `canViewLinkedStudents` | No | No | No | No | No | Yes | No |
 | `canViewNotifications` | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `canViewCourses` | Yes | Yes | Yes | Yes | Yes | No | No |
+| `canViewSections` | Yes | Yes | Yes | Yes | Yes | No | No |
+| `canViewStudents` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewStudentProfiles` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewOwnStudentProfile` | No | No | No | No | Yes | No | No |
+| `canViewEnrollments` | Yes | Yes | No | No | No | No | No |
+| `canViewAttendance` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewEvaluations` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewGradebook` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewMaterials` | Yes | Yes | Yes | Yes | No | No | No |
+| `canViewCertificates` | Yes | Yes | No | No | No | No | No |
+| `canViewStaff` | Yes | Yes | No | No | No | No | No |
 | `canManageUsers` | Yes | Yes | No | No | No | No | No |
 | `canManageCourses` | Yes | Yes | No | No | No | No | No |
 | `canManageSections` | Yes | Yes | No | No | No | No | No |
@@ -102,24 +114,25 @@ The matrix reflects the current navigation and route contracts, not a proposed f
 | Notifications | `canViewNotifications` and explicit role allow-list | All | Purpose-specific read capability |
 | Settings | `canViewInstitutionSettings` and owner/admin | Owner, admin | Purpose-specific read capability |
 | Audit log | `canViewAuditLog` and owner/admin | Owner, admin | Purpose-specific read capability |
-| Courses/workspace | Any of `canManageCourses`, `canGrade`, `canSubmit` | Owner, admin, teacher, assistant, student | Overloaded view/manage contract |
-| Students/profile | Any of `canManageCourses`, `canGrade` | Owner, admin, teacher, assistant | Overloaded and indirect |
-| Enrollments | `canManageCourses` and owner/admin | Owner, admin | Indirect |
-| Staff | `canManageUsers` and owner/admin | Owner, admin | Management-heavy for read access |
-| Attendance | `canManageAttendance` | Owner, admin, teacher, assistant | Read/write combined |
+| Courses/workspace | `canViewCourses` | Owner, admin, teacher, assistant, student | Purpose-specific read capability |
+| Students directory | `canViewStudents` | Owner, admin, teacher, assistant | Purpose-specific read capability |
+| Student profile | `canViewStudentProfiles` | Owner, admin, teacher, assistant | Purpose-specific sensitive-profile read capability |
+| Enrollments | `canViewEnrollments` and owner/admin | Owner, admin | Purpose-specific read capability |
+| Staff | `canViewStaff` and owner/admin | Owner, admin | Purpose-specific directory read capability |
+| Attendance | `canViewAttendance` | Owner, admin, teacher, assistant | Purpose-specific read capability |
 | Schedule | `canViewSchedule` | Owner, admin, teacher, assistant | Purpose-specific read capability |
-| Evaluations | `canGrade` | Owner, admin, teacher, assistant | Reasonable but broad |
-| Gradebook | `canGrade` | Owner, admin, teacher, assistant | Read/write combined |
+| Evaluations | `canViewEvaluations` | Owner, admin, teacher, assistant | Purpose-specific read capability |
+| Gradebook | `canViewGradebook` | Owner, admin, teacher, assistant | Purpose-specific read capability |
 | Reports | `canViewReports` and staff-like role | Owner, admin, teacher, assistant | Purpose-specific but role-limited |
-| Certificates | `canManageCertificates` and owner/admin | Owner, admin | Read/write combined |
-| Materials | `canManageMaterials` | Owner, admin, teacher, assistant | Read/write combined |
+| Certificates | `canViewCertificates` and owner/admin | Owner, admin | Purpose-specific read capability |
+| Materials | `canViewMaterials` | Owner, admin, teacher, assistant | Purpose-specific read capability |
 | Library | `canAccessLibrary` | Owner, admin, teacher, assistant | Purpose-specific access capability |
-| My space | `canSubmit` plus exclusion of managerial capabilities | Student | Indirect role inference |
+| My space | `canViewOwnStudentProfile` and student role | Student | Purpose-specific personal read capability |
 | Guardian space | `canViewLinkedStudents` and guardian role | Guardian | Purpose-specific relationship capability |
 
 ## Capability cleanup status
 
-C24 replaced the first wave of temporary visual-foundation capability substitutions with explicit route-purpose capabilities. Read/write capability separation remains pending for future data integration.
+C24 replaced the first wave of temporary visual-foundation capability substitutions with explicit route-purpose capabilities. C28 adopted the C27 read capabilities for the remaining current route-admission contracts without changing the effective role matrix.
 
 Completed in C24:
 
@@ -131,8 +144,8 @@ Completed in C24:
 
 Still pending:
 
-- Student and course directories infer read access from management, grading, or submission capabilities.
-- Attendance, gradebook, certificates, staff, enrollments, settings, schedule, and library still need read/write or view/manage separation before real data integration.
+- Object-level institution, assignment, enrollment, own-record, and guardian-link constraints.
+- Separate write/action capabilities for real mutations, approvals, exports, uploads, issuance, and lifecycle transitions.
 
 ## Recommended future capabilities
 

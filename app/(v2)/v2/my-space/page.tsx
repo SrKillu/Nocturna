@@ -36,7 +36,12 @@ export default async function MySpaceV2Page() {
     return <V2ProblemState code="INSTITUTION_UNAVAILABLE" />;
   }
 
-  if (!canAccessMySpaceV2(session.activeMembership.capabilities)) {
+  if (
+    !canAccessMySpaceV2(
+      session.activeMembership.roleKey,
+      session.activeMembership.capabilities
+    )
+  ) {
     return (
       <V2AccessDeniedState
         institutionName={activeMembership.institutionName}

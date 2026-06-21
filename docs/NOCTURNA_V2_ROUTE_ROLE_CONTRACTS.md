@@ -21,21 +21,21 @@ This is a frontend authorization contract. It does not replace future institutio
 | `/v2/notifications` | Yes | Yes | Yes | Yes | Yes | Yes | Yes | `canViewNotifications` |
 | `/v2/settings` | Yes | Yes | No | No | No | No | No | `canViewInstitutionSettings` |
 | `/v2/audit-log` | Yes | Yes | No | No | No | No | No | `canViewAuditLog` |
-| `/v2/courses` | Yes | Yes | Yes | Yes | Yes | No | No | Any of `canManageCourses`, `canGrade`, `canSubmit` |
-| `/v2/courses/[courseId]` | Yes | Yes | Yes | Yes | Yes | No | No | Same as courses |
-| `/v2/students` | Yes | Yes | Yes | Yes | No | No | No | Any of `canManageCourses`, `canGrade` |
-| `/v2/students/[studentId]` | Yes | Yes | Yes | Yes | No | No | No | Same as students |
-| `/v2/enrollments` | Yes | Yes | No | No | No | No | No | `canManageCourses` plus owner/admin |
-| `/v2/staff` | Yes | Yes | No | No | No | No | No | `canManageUsers` plus owner/admin |
-| `/v2/attendance` | Yes | Yes | Yes | Yes | No | No | No | `canManageAttendance` |
+| `/v2/courses` | Yes | Yes | Yes | Yes | Yes | No | No | `canViewCourses` |
+| `/v2/courses/[courseId]` | Yes | Yes | Yes | Yes | Yes | No | No | `canViewCourses` |
+| `/v2/students` | Yes | Yes | Yes | Yes | No | No | No | `canViewStudents` |
+| `/v2/students/[studentId]` | Yes | Yes | Yes | Yes | No | No | No | `canViewStudentProfiles` |
+| `/v2/enrollments` | Yes | Yes | No | No | No | No | No | `canViewEnrollments` plus owner/admin |
+| `/v2/staff` | Yes | Yes | No | No | No | No | No | `canViewStaff` plus owner/admin |
+| `/v2/attendance` | Yes | Yes | Yes | Yes | No | No | No | `canViewAttendance` |
 | `/v2/schedule` | Yes | Yes | Yes | Yes | No | No | No | `canViewSchedule` |
-| `/v2/evaluations` | Yes | Yes | Yes | Yes | No | No | No | `canGrade` |
-| `/v2/gradebook` | Yes | Yes | Yes | Yes | No | No | No | `canGrade` |
+| `/v2/evaluations` | Yes | Yes | Yes | Yes | No | No | No | `canViewEvaluations` |
+| `/v2/gradebook` | Yes | Yes | Yes | Yes | No | No | No | `canViewGradebook` |
 | `/v2/reports` | Yes | Yes | Yes | Yes | No | No | No | `canViewReports` plus staff role scope |
-| `/v2/certificates` | Yes | Yes | No | No | No | No | No | `canManageCertificates` plus owner/admin |
-| `/v2/materials` | Yes | Yes | Yes | Yes | No | No | No | `canManageMaterials` |
+| `/v2/certificates` | Yes | Yes | No | No | No | No | No | `canViewCertificates` plus owner/admin |
+| `/v2/materials` | Yes | Yes | Yes | Yes | No | No | No | `canViewMaterials` |
 | `/v2/library` | Yes | Yes | Yes | Yes | No | No | No | `canAccessLibrary` |
-| `/v2/my-space` | No | No | No | No | Yes | No | No | `canSubmit` excluding managerial capabilities |
+| `/v2/my-space` | No | No | No | No | Yes | No | No | `canViewOwnStudentProfile` plus student |
 | `/v2/guardian-space` | No | No | No | No | No | Yes | No | `canViewLinkedStudents` plus guardian |
 
 ## Role-to-route matrix
@@ -63,7 +63,8 @@ This is a frontend authorization contract. It does not replace future institutio
 |---|---|
 | Dashboard | Protected V2 layout and active membership |
 | Courses and course workspace | `canAccessCoursesV2` |
-| Students and student profile | `canAccessStudentsV2` |
+| Students | `canAccessStudentsV2` |
+| Student profile | `canAccessStudentProfileV2` |
 | My space | `canAccessMySpaceV2` |
 | Guardian space | `canAccessGuardianSpaceV2` |
 | Attendance | `canAccessAttendanceV2` |
@@ -83,7 +84,7 @@ This is a frontend authorization contract. It does not replace future institutio
 ## Inferred or pending contracts
 
 - Dashboard has no module-specific capability; authentication and active membership are enforced by the V2 boundary.
-- Courses, students, attendance, evaluations, materials, gradebook, certificates, staff, enrollments, and settings still use capabilities that combine viewing with management or mutation authority.
+- C28 adopts explicit read capabilities for courses, students, student profiles, my space, enrollments, attendance, evaluations, materials, gradebook, certificates, and staff while preserving the effective role matrix.
 - Course workspace and student profile reuse parent-module authorization. Future relationship-aware integration must add object-level authorization after route-level admission.
 
 ## Risks

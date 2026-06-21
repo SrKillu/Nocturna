@@ -55,11 +55,11 @@ export interface GradebookV2FilterState {
 }
 
 export const GRADEBOOK_V2_CAPABILITIES = [
-  'canGrade',
+  'canViewGradebook',
 ] as const satisfies readonly CapabilityKey[];
 
 export function canAccessGradebookV2(capabilities: Capabilities): boolean {
-  return capabilities.canGrade === true;
+  return capabilities.canViewGradebook === true;
 }
 
 export function gradebookAudienceForRole(

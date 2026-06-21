@@ -64,13 +64,11 @@ export interface CourseV2Workspace extends CourseV2ListItem {
 }
 
 export const COURSES_V2_CAPABILITIES = [
-  'canManageCourses',
-  'canGrade',
-  'canSubmit',
+  'canViewCourses',
 ] as const satisfies readonly CapabilityKey[];
 
 export function canAccessCoursesV2(capabilities: Capabilities): boolean {
-  return COURSES_V2_CAPABILITIES.some((capability) => capabilities[capability] === true);
+  return capabilities.canViewCourses === true;
 }
 
 export function courseAudienceForRole(roleKey: RoleKey): CourseV2Audience | null {

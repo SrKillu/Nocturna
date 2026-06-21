@@ -36,8 +36,9 @@ describe('Materials V2 foundation', () => {
     );
   });
 
-  it('requires canManageMaterials without granting access through unrelated capabilities', () => {
-    expect(canAccessMaterialsV2({ canManageMaterials: true })).toBe(true);
+  it('requires canViewMaterials without granting access through management', () => {
+    expect(canAccessMaterialsV2({ canViewMaterials: true })).toBe(true);
+    expect(canAccessMaterialsV2({ canManageMaterials: true })).toBe(false);
     expect(canAccessMaterialsV2({ canManageCourses: true })).toBe(false);
     expect(canAccessMaterialsV2({ canGrade: true })).toBe(false);
     expect(canAccessMaterialsV2({ canSubmit: true })).toBe(false);

@@ -5,7 +5,7 @@ import { V2ProblemState } from '@/components/v2/states/v2-problem-state';
 import { V2StudentProfile } from '@/components/v2/students/profile/v2-student-profile';
 import { SessionV2ValidationError, validateSessionV2 } from '@/lib/auth/session';
 import { getMockStudentProfileV2 } from '@/lib/mocks/students-v2';
-import { canAccessStudentsV2 } from '@/lib/types/students-v2';
+import { canAccessStudentProfileV2 } from '@/lib/types/students-v2';
 
 interface StudentProfileV2PageProps {
   params: { studentId: string };
@@ -42,7 +42,7 @@ export default async function StudentProfileV2Page({
     return <V2ProblemState code="INSTITUTION_UNAVAILABLE" />;
   }
 
-  if (!canAccessStudentsV2(session.activeMembership.capabilities)) {
+  if (!canAccessStudentProfileV2(session.activeMembership.capabilities)) {
     return (
       <V2AccessDeniedState
         institutionName={activeMembership.institutionName}

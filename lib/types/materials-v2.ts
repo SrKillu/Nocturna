@@ -44,11 +44,11 @@ export interface MaterialV2FilterState {
 }
 
 export const MATERIALS_V2_CAPABILITIES = [
-  'canManageMaterials',
+  'canViewMaterials',
 ] as const satisfies readonly CapabilityKey[];
 
 export function canAccessMaterialsV2(capabilities: Capabilities): boolean {
-  return capabilities.canManageMaterials === true;
+  return capabilities.canViewMaterials === true;
 }
 
 export function materialAudienceForRole(roleKey: RoleKey): MaterialV2Audience | null {

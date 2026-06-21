@@ -12,6 +12,8 @@ C27 adds explicit read-capability vocabulary for domains that currently use broa
 
 C27 does not adopt the new capabilities in navigation, route admission, runtime access helpers, or pages. The effective visible and direct-access matrix remains unchanged. C28 should adopt the approved read capabilities while updating route-role contract tests in the same change.
 
+> C28 adopted the approved read capabilities for route admission and navigation while preserving the effective role matrix.
+
 ## 2. Capabilities added
 
 | Capability | Purpose | Roles set to true | Domain | Future replacement for route reads | RLS risk reduced |

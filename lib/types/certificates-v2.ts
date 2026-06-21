@@ -64,7 +64,7 @@ export interface CertificateV2FilterState {
 }
 
 export const CERTIFICATES_V2_CAPABILITIES = [
-  'canManageCertificates',
+  'canViewCertificates',
 ] as const satisfies readonly CapabilityKey[];
 export const CERTIFICATES_V2_ROLES = [
   'owner',
@@ -78,7 +78,7 @@ export function canAccessCertificatesV2(
   return (
     CERTIFICATES_V2_ROLES.includes(
       roleKey as (typeof CERTIFICATES_V2_ROLES)[number]
-    ) && capabilities.canManageCertificates === true
+    ) && capabilities.canViewCertificates === true
   );
 }
 

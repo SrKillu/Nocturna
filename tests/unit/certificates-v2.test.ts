@@ -30,7 +30,7 @@ describe('Certificates V2 foundation', () => {
     expect(getMockCertificatesV2('support')).toEqual(EMPTY_CERTIFICATES_V2);
   });
 
-  it('requires both canManageCertificates and owner/admin role scope', () => {
+  it('requires both canViewCertificates and owner/admin role scope', () => {
     expect(
       canAccessCertificatesV2('owner', ROLE_CAPABILITIES.owner)
     ).toBe(true);
@@ -40,11 +40,11 @@ describe('Certificates V2 foundation', () => {
 
     const teacherWithCertificateCapability: Capabilities = {
       ...ROLE_CAPABILITIES.teacher,
-      canManageCertificates: true,
+      canViewCertificates: true,
     };
     const ownerWithoutCertificateCapability: Capabilities = {
       ...ROLE_CAPABILITIES.owner,
-      canManageCertificates: false,
+      canViewCertificates: false,
     };
 
     expect(
@@ -55,13 +55,14 @@ describe('Certificates V2 foundation', () => {
     ).toBe(false);
   });
 
-  it('does not substitute report, grade or submit capabilities', () => {
+  it('does not substitute management, report, grade or submit capabilities', () => {
     const substituteCapabilities: Capabilities = {
       ...ROLE_CAPABILITIES.student,
       canViewReports: true,
       canGrade: true,
       canSubmit: true,
-      canManageCertificates: false,
+      canManageCertificates: true,
+      canViewCertificates: false,
     };
 
     expect(

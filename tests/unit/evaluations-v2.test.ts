@@ -39,8 +39,9 @@ describe('Evaluations V2 foundation', () => {
     );
   });
 
-  it('requires canGrade without granting access through unrelated capabilities', () => {
-    expect(canAccessEvaluationsV2({ canGrade: true })).toBe(true);
+  it('requires canViewEvaluations without granting access through grading', () => {
+    expect(canAccessEvaluationsV2({ canViewEvaluations: true })).toBe(true);
+    expect(canAccessEvaluationsV2({ canGrade: true })).toBe(false);
     expect(canAccessEvaluationsV2({ canManageCourses: true })).toBe(false);
     expect(canAccessEvaluationsV2({ canSubmit: true })).toBe(false);
     expect(canAccessEvaluationsV2({ canViewReports: true })).toBe(false);

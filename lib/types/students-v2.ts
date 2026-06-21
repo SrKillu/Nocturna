@@ -71,12 +71,18 @@ export interface StudentV2FilterState {
 }
 
 export const STUDENTS_V2_CAPABILITIES = [
-  'canManageCourses',
-  'canGrade',
+  'canViewStudents',
+] as const satisfies readonly CapabilityKey[];
+export const STUDENT_PROFILE_V2_CAPABILITIES = [
+  'canViewStudentProfiles',
 ] as const satisfies readonly CapabilityKey[];
 
 export function canAccessStudentsV2(capabilities: Capabilities): boolean {
-  return STUDENTS_V2_CAPABILITIES.some((capability) => capabilities[capability] === true);
+  return capabilities.canViewStudents === true;
+}
+
+export function canAccessStudentProfileV2(capabilities: Capabilities): boolean {
+  return capabilities.canViewStudentProfiles === true;
 }
 
 export function studentAudienceForRole(roleKey: RoleKey): StudentV2Audience | null {
