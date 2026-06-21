@@ -64,3 +64,16 @@ STATUS: PENDING_REVIEW
 - No browser code may receive `service_role` credentials.
 - Real adapters remain blocked until active membership, role and session
   selection are DB-backed, server-validated and RLS-tested.
+
+## C35 Rebuild strategy impact
+
+- The V2 frontend, routes, view models and security contracts are retained.
+- Domain UI remains mock-backed.
+- Real adapters wait for either a clean, tested V2 staging database or an
+  explicitly reconciled legacy path.
+- The preferred technical destination is clean staging; legacy remains
+  available during retention and cutover decisions.
+- No browser code may use `service_role`.
+- V1 profile/JWT claims remain a temporary compatibility bridge, never final
+  V2 authority.
+- Feature flags must allow adapters to be disabled without changing the UI.

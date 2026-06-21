@@ -283,3 +283,24 @@ Do not execute `db push`, migration application or production integration until
 the baseline and forward draft receive explicit human approval.
 
 Recommendation: `C34_RECOMMEND_C35_SCHEMA_BASELINE_RECONCILIATION`.
+
+## C35 Rebuild vs Reconciliation Decision
+
+C35 compared repairing the current drifted project with building a clean
+Supabase V2 staging foundation.
+
+Recommendation:
+
+- preserve the current project as temporary V1/legacy;
+- preserve the frontend, routes, contracts, tests and documentation;
+- design V2 on a clean, migration-only staging baseline;
+- complete a data-retention audit before any legacy migration or retirement.
+
+Immediate next batch: C36 Data Retention Audit.
+
+Conditional following batch: Clean Supabase V2 Architecture Draft.
+
+No `db push`, project creation, migration application or production action is
+authorized.
+
+`C35_RECOMMEND_HYBRID_CLEAN_STAGING_THEN_MIGRATE`
