@@ -32,6 +32,22 @@ A module is not ready for real Supabase integration merely because its route, mo
 - No remote Supabase change occurred.
 - Courses and sections remain **not ready for integration** until human review approves active-membership context, SQL, policies, projections, seed, rollback and test evidence.
 
+## C31 review and hardening update
+
+- C30 was reviewed against the current V2 role/capability, Courses mock and route contracts.
+- A trusted active-membership DB context plan is drafted, recommending
+  server-managed per-session selection plus current DB membership validation.
+- Student visibility options are compared; real student data is allowed only with
+  minimal students/enrollments and complete policy tests.
+- A staff projection/RLS recursion plan recommends a generic label for the first
+  slice and forbids private-profile or `SECURITY DEFINER` shortcuts.
+- Historical visibility is drafted: archived hidden by default, closed-term
+  history owner/admin-only through an explicit filter, staff/student deferred.
+- Policy tests now include revocation, multi-session context, exact section scope,
+  safe projections, views and historical behavior.
+- C30 still has blockers and is **not approved for migration conversion**.
+- No executable migration is approved and no remote Supabase change occurred.
+
 Statuses:
 
 - **Done:** present and usable for planning.

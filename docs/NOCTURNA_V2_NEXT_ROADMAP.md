@@ -77,8 +77,19 @@ Design the tenant-safe academic data foundation without applying unreviewed migr
   - first vertical-slice candidates compared, with Courses + Sections read-only recommended
 - C30 must use the C29 contracts to produce a `PENDING_REVIEW` schema/RLS draft; it must not treat conceptual entity names or indexes as approved executable SQL.
 - C30 Courses + Sections schema/RLS draft completed as review-only documentation, including commented pseudo-SQL, policy tests, index and seed plans.
-- Next step: human review and correction of C30, especially trusted active-membership context, staff display projection, student-scope inclusion, historical visibility and policy recursion.
+- C31 review/hardening completed before migration conversion:
+  - active-membership DB context options and conservative per-session strategy documented
+  - student real-data inclusion gate documented
+  - staff projection/RLS recursion plan documented
+  - archived/closed-term visibility proposal documented
+  - policy tests and migration-readiness blockers expanded
+- C31 verdict remains `C31_C30_DRAFT_NEEDS_FIXES`; documentation completion
+  does not mean the policies are executable or approved.
+- C32 may convert C30 into a migration draft only after C31 blockers are resolved
+  and approved.
 - Do not convert C30 into a migration or touch remote Supabase until SQL, policies, seed, rollback and local policy-test evidence receive explicit approval.
+- No `db push`, remote SQL or migration application is permitted without separate
+  explicit approval.
 - Review the current Supabase schema and migration history without changing the remote project.
 - Require an approved capability-to-RLS operation mapping before drafting each domain migration.
 - Model institutions, terms, memberships, roles, students, guardians, staff, courses, sections, groups, enrollments, and assignments.
