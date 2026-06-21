@@ -10,6 +10,17 @@ STATUS: PENDING_REVIEW
 
 A module is not ready for real Supabase integration merely because its route, mock, and tests exist. It is ready only when its data contracts, read/write capabilities, tenant relationships, RLS policy matrix, indexing, audit, query behavior, and staging strategy are all approved.
 
+## C29 planning update
+
+- Entity and relationship contracts are drafted in `NOCTURNA_V2_DOMAIN_DATA_CONTRACTS.md` and `NOCTURNA_V2_ENTITY_RELATIONSHIP_DRAFT.md`.
+- Operation contracts are drafted in `NOCTURNA_V2_DOMAIN_OPERATION_CONTRACTS.md`.
+- Three first vertical-slice candidates and a recommendation are documented in `NOCTURNA_V2_FIRST_VERTICAL_SLICE_CANDIDATES.md`.
+- C27/C28 explicit read capabilities are now defined and adopted for current route admission.
+- No schema SQL is approved.
+- No executable migration exists for C29.
+- No SQL RLS policy matrix is approved.
+- Every C29 entity, index and policy statement remains conceptual and `PENDING_REVIEW`.
+
 Statuses:
 
 - **Done:** present and usable for planning.
@@ -42,23 +53,23 @@ Statuses:
 
 | Module | Existing foundation (C1–C5) | Capabilities (C6–C7) | Data and policy (C8–C13) | Operations (C14–C16) | Current readiness |
 |---|---|---|---|---|---|
-| Courses | C1–C5 Done | C6 Missing (`canViewCourses`); C7 Partial (`canManageCourses`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Sections | C1 Missing; C2–C4 Partial through course mocks; C5 Missing | C6–C7 Missing/overloaded | C8–C13 Missing | C14–C16 Missing | Not ready |
-| Students | C1–C5 Done | C6 Missing (`canViewStudents`/profiles); C7 Missing/narrowing needed | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Guardians | C1–C5 Done through guardian space | C6 Done (`canViewLinkedStudents`); C7 Missing (`canManageGuardianLinks`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial/N/A; C16 Missing | Not ready |
-| Staff | C1–C5 Done | C6 Missing (`canViewStaff`); C7 Partial (`canManageUsers`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Enrollments | C1–C5 Done | C6 Missing; C7 Overloaded through `canManageCourses` | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Schedule | C1–C5 Done | C6 Done (`canViewSchedule`); C7 Missing | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Attendance | C1–C5 Done | C6 Missing; C7 Overloaded (`canManageAttendance`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Evaluations | C1–C5 Done | C6 Missing; C7 Overloaded (`canGrade`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Gradebook | C1–C5 Done | C6 Missing; C7 Overloaded (`canGrade`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Materials | C1–C5 Done | C6 Missing; C7 Overloaded (`canManageMaterials`) | C8 Partial; C9–C13 Missing, including Storage policy | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Library | C1–C5 Done | C6 Done (`canAccessLibrary`); C7 Missing | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Reports | C1–C5 Done | C6 Done (`canViewReports`); C7 Missing for export/schedule | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Certificates | C1–C5 Done | C6 Missing; C7 Overloaded (`canManageCertificates`) | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Notifications | C1–C5 Done | C6 Done (`canViewNotifications`); C7 Missing | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Audit log | C1–C5 Done | C6 Done (`canViewAuditLog`); C7 N/A except export | C8 Partial; C9–C13 Missing | C14 Done; C15 Partial; C16 Missing | Not ready |
-| Settings | C1–C5 Done | C6 Done (`canViewInstitutionSettings`); C7 Missing (`canManageInstitutionSettings`) | C8 Partial; C9–C13 Missing | C14 Done; C15 N/A/Partial; C16 Missing | Not ready |
+| Courses | C1–C5 Done | C6 Done (`canViewCourses`); C7 Partial (`canManageCourses`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Sections | C1 Missing; C2–C4 Partial through course mocks; C5 Missing | C6 Done (`canViewSections`); C7 Partial (`canManageSections`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Partial; C15 Drafted; C16 Missing | Not ready |
+| Students | C1–C5 Done | C6 Done (`canViewStudents`, `canViewStudentProfiles`, `canViewOwnStudentProfile`); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Guardians | C1–C5 Done through guardian space | C6 Done (`canViewLinkedStudents`); C7 Missing (`canManageGuardianLinks`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted/N/A; C16 Missing | Not ready |
+| Staff | C1–C5 Done | C6 Done (`canViewStaff`); C7 Partial (`canManageUsers`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Enrollments | C1–C5 Done | C6 Done (`canViewEnrollments`); C7 Missing | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Schedule | C1–C5 Done | C6 Done (`canViewSchedule`); C7 Missing | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Attendance | C1–C5 Done | C6 Done (`canViewAttendance`); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Evaluations | C1–C5 Done | C6 Done (`canViewEvaluations`); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Gradebook | C1–C5 Done | C6 Done (`canViewGradebook`, own/linked grade reads reserved); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Materials | C1–C5 Done | C6 Done (`canViewMaterials`); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 and Storage policy Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Library | C1–C5 Done | C6 Done (`canAccessLibrary`); C7 Missing | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Reports | C1–C5 Done | C6 Done (`canViewReports`); C7 Missing for export/schedule | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Certificates | C1–C5 Done | C6 Done (`canViewCertificates`); C7 Missing/narrowing needed | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Notifications | C1–C5 Done | C6 Done (`canViewNotifications`); C7 Missing | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Audit log | C1–C5 Done | C6 Done (`canViewAuditLog`); C7 N/A except export | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted; C16 Missing | Not ready |
+| Settings | C1–C5 Done | C6 Done (`canViewInstitutionSettings`); C7 Missing (`canManageInstitutionSettings`) | C8, C9, C10, C12, C13 Drafted; C11 Missing | C14 Done; C15 Drafted/N/A; C16 Missing | Not ready |
 
 ## Per-module approval checklist
 
