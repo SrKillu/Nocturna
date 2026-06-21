@@ -157,7 +157,7 @@ Prioritize smaller read/write distinctions instead of granting broader managemen
 - Eighteen domain unit suites validate mock selectors, filters, state helpers, and access-related behavior.
 - Capability tests verify the role matrix; auth and middleware tests cover the V2 session boundary.
 - Dynamic course and student routes include loading and safe not-found states.
-- Current repository baseline after C24: 24 unit test files and 176 passing tests.
+- Current repository baseline after C25: 25 unit test files and 209 passing tests.
 - Component foundations exist for desktop/mobile lists, filters, summaries, detail panels, and controlled empty, denied, error, loading, and problem states.
 
 ## Cross-cutting risks
@@ -172,3 +172,5 @@ Prioritize smaller read/write distinctions instead of granting broader managemen
 ## Recommended immediate action
 
 Complete capability cleanup, route-role contract tests, UI QA, and a domain data-contract inventory before proposing schema or RLS migrations. Database work should proceed only through small reviewed vertical slices.
+
+C25 added centralized route-role contract tests to reduce drift between navigation visibility and direct route authorization before database/RLS integration.
