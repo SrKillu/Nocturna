@@ -46,3 +46,16 @@ remain later approvals.
 
 The C36 gate remains unchanged. Harness and synthetic disposable testing may
 advance, but no legacy audit/export/copy/cutover/retirement is authorized.
+
+## C39 Follow-up
+
+C39 implements the dry-run/preflight harness, redaction, allowlisted evidence,
+exact-target cleanup planning and focused unit tests. It does not start
+Supabase, execute SQL or create migrations.
+
+Next recommendation:
+
+`C39_RECOMMEND_C40_DRY_RUN_HARNESS_EXECUTION_AND_EVIDENCE`
+
+C40 may run only the dry-run CLI and capture redacted evidence. Local database
+startup remains a separate approval.

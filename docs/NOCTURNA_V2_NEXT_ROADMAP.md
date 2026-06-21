@@ -365,3 +365,23 @@ Recommended next batch:
 
 C39 should implement dry-run-first orchestration, isolation, redaction and
 cleanup controls before migration SQL is made executable.
+
+## C39 Disposable DB Harness Implementation
+
+C39 implements a dry-run-only harness scaffold:
+
+- approved-root, forbidden-command/path and linked-state preflight;
+- secret redaction and allowlisted evidence;
+- exact-target cleanup planning;
+- simulated reconstruction phases;
+- focused unit tests.
+
+No Supabase service was started, no SQL or migration was executed and no
+database or cleanup action occurred.
+
+Recommended next batch:
+
+`C39_RECOMMEND_C40_DRY_RUN_HARNESS_EXECUTION_AND_EVIDENCE`
+
+C40 should execute only the dry-run CLI and capture redacted evidence. Local
+Supabase startup remains separately blocked.
