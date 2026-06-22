@@ -49,3 +49,8 @@ service startup. Before `supabase start` can be authorized, C41 must define:
 The dry-run is operationally safe and fail-closed. The next step is not schema
 or migration implementation; it is explicit planning and approval for isolated
 local Supabase startup.
+
+## C40.1 path update
+
+Evidence relocation was a documentation-only copy/removal operation. The
+harness was not executed again.

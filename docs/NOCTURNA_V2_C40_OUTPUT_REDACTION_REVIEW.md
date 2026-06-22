@@ -35,3 +35,9 @@ non-sensitive status messages.
   extra prose, but this is not a security defect.
 
 Verdict: `C40_OUTPUT_REDACTION_PASS`.
+
+## C40.1 path update
+
+The reviewed artifacts are versioned under
+`docs/evidence/c40-dry-run-harness-evidence/`. Their content was copied without
+regeneration and remains covered by this review.

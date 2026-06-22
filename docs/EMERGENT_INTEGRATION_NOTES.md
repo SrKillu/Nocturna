@@ -140,3 +140,6 @@ STATUS: PENDING_REVIEW
 - No database policy, schema or relationship query was executed.
 - Evidence confirms no browser or output exposure of privileged credentials.
 - Future adapter work still requires executed disposable grants/RLS evidence.
+
+C40.1 only relocates versioned evidence into `docs/`; adapter and runtime
+boundaries are unchanged.

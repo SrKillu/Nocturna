@@ -266,3 +266,6 @@ by separate approval for local disposable Supabase execution.
 
 Next gate: an explicit local Supabase startup approval/isolation plan, or harness
 hardening if that planning reveals a defect.
+
+C40.1 stores the same redacted evidence under allowed documentation paths. It
+does not add executed database-policy evidence.

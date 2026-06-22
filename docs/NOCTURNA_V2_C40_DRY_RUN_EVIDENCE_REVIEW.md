@@ -6,9 +6,9 @@ STATUS: PENDING_REVIEW
 
 | Command | Exit code | Evidence |
 |---|---:|---|
-| `npx tsx scripts/disposable-db/preflight.ts --dry-run --json` | 1 | `outputs/c40-dry-run-harness-evidence/preflight-dry-run.json` |
-| `npx tsx scripts/disposable-db/run-harness.ts --dry-run --json` | 1 | `outputs/c40-dry-run-harness-evidence/run-harness-dry-run.json` |
-| `npx tsx scripts/disposable-db/run-harness.ts --dry-run --explain` | 1 | `outputs/c40-dry-run-harness-evidence/run-harness-explain.txt` |
+| `npx tsx scripts/disposable-db/preflight.ts --dry-run --json` | 1 | `docs/evidence/c40-dry-run-harness-evidence/preflight-dry-run.json` |
+| `npx tsx scripts/disposable-db/run-harness.ts --dry-run --json` | 1 | `docs/evidence/c40-dry-run-harness-evidence/run-harness-dry-run.json` |
+| `npx tsx scripts/disposable-db/run-harness.ts --dry-run --explain` | 1 | `docs/evidence/c40-dry-run-harness-evidence/run-harness-explain.txt` |
 
 All nonzero exits are explained by the expected fail-closed blocker
 `supabase-temp-present`.
@@ -45,3 +45,8 @@ The dry-run behaves as designed: it reports safe plans and fails closed on
 inherited Supabase state. No unexpected blocker or output leak was found.
 
 Verdict: `C40_DRY_RUN_EVIDENCE_CAPTURED`.
+
+## C40.1 path update
+
+The same evidence bytes are now versioned under `docs/evidence/`; no harness
+command was rerun.

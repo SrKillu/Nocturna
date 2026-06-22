@@ -404,3 +404,8 @@ Recommended next batch:
 C41 should define an isolated local workdir, exact commands, resource identity,
 credential/redaction boundaries and a human go/no-go gate. It must not start
 Supabase during the planning batch.
+
+### C40.1 evidence path correction
+
+Versioned C40 evidence moved unchanged from blocked `outputs/*` paths to
+`docs/evidence/` and `docs/reports/`. No harness or Supabase command was rerun.

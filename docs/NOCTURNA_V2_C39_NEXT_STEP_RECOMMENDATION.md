@@ -50,3 +50,6 @@ Next recommendation:
 
 C41 should define isolation and approval requirements. It must not start
 Supabase itself.
+
+C40.1 relocates the captured evidence to allowed documentation paths without
+rerunning the harness. The recommendation remains unchanged.

@@ -38,3 +38,8 @@ C41 should design and request approval for:
 After C41 review, a separate execution authorization must explicitly allow
 starting the isolated local Supabase stack. Approval of this recommendation is
 not itself permission to run `supabase start`.
+
+## C40.1 path update
+
+C40 evidence is now versioned under allowed `docs/evidence/` and `docs/reports/`
+paths. The C41 recommendation is unchanged.

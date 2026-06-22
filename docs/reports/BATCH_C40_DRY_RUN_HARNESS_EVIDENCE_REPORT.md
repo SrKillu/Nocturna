@@ -33,9 +33,9 @@ failure.
 
 ## Evidence created
 
-- `outputs/c40-dry-run-harness-evidence/preflight-dry-run.json`
-- `outputs/c40-dry-run-harness-evidence/run-harness-dry-run.json`
-- `outputs/c40-dry-run-harness-evidence/run-harness-explain.txt`
+- `docs/evidence/c40-dry-run-harness-evidence/preflight-dry-run.json`
+- `docs/evidence/c40-dry-run-harness-evidence/run-harness-dry-run.json`
+- `docs/evidence/c40-dry-run-harness-evidence/run-harness-explain.txt`
 
 ## Documents created
 
@@ -112,7 +112,7 @@ C41 itself must remain planning-only.
 - No runtime, endpoint, middleware, V1, package, deployment or production file
   was modified.
 
-## Publication
+## Initial publication status before C40.1
 
 - Evidence commit: `267089f036e3bd99f1f66c37b7f4d3074978d742`.
 - Push: completed to
@@ -122,14 +122,25 @@ C41 itself must remain planning-only.
 - `PR Checks / validate`: PASS.
 - `Nocturna Guardrails / protected-paths`: FAIL.
 
-The guardrail failure is caused only by its unconditional `outputs/*` rule. C40
-explicitly requires the report plus three redacted evidence files to be
-versioned, so four authorized files trigger that rule. No protected secret,
-runtime, migration, package or production path is present.
+The guardrail failure was caused only by its unconditional `outputs/*` rule.
+No protected secret, runtime, migration, package or production path was
+present.
 
-Human decision required before merge: approve a scoped exception/process for
-these C40 evidence files, or explicitly authorize a revised evidence location.
-C40 does not change the guardrail itself.
+## C40.1 Guardrail path fix
+
+C40.1 moved versioned C40 evidence from `outputs/*` into allowed documentation paths:
+
+- `docs/evidence/c40-dry-run-harness-evidence/`
+- `docs/reports/BATCH_C40_DRY_RUN_HARNESS_EVIDENCE_REPORT.md`
+
+No evidence was regenerated.
+No harness command was rerun.
+No Supabase service, SQL, migration, remote access, runtime, endpoint, package or production file was touched.
+
+Verdict: `C40_1_OUTPUTS_GUARDRAIL_PATH_FIXED`
+
+After the C40.1 commit, the PR diff contains no `outputs/*`. GitHub recheck is
+pending.
 
 ## Verdicts
 

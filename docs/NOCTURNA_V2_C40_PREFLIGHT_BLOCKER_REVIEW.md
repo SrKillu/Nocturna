@@ -38,3 +38,8 @@ approval and isolation plan that defines:
 - human approval checkpoint before any command.
 
 Verdict: `C40_EXPECTED_BLOCKERS_CONFIRMED`.
+
+## C40.1 path update
+
+Moving the captured files to `docs/evidence/` changes no blocker result and did
+not rerun preflight.
