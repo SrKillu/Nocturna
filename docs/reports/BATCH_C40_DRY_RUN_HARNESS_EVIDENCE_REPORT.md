@@ -139,8 +139,8 @@ No Supabase service, SQL, migration, remote access, runtime, endpoint, package o
 
 Verdict: `C40_1_OUTPUTS_GUARDRAIL_PATH_FIXED`
 
-After the C40.1 commit, the PR diff contains no `outputs/*`. GitHub recheck is
-pending.
+After the C40.1 commit, the PR diff contains no `outputs/*`.
+`Nocturna Guardrails / protected-paths` and `PR Checks / validate` both pass.
 
 ## Verdicts
 

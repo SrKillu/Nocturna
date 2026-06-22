@@ -43,13 +43,15 @@ tracked path was removed.
 - Unit tests: PASS — 30 files, 237 tests.
 - Build: PASS.
 - PR diff contains no `outputs/*`: PASS.
-- GitHub guardrail recheck: pending.
+- GitHub guardrail recheck: PASS.
+- GitHub `PR Checks / validate`: PASS.
 
 The build completed successfully with the repository's existing dynamic-route
 cookie diagnostics.
 
 ## Verdicts
 
+- `C40_1_PUSHED_PR43_FIX`
 - `C40_1_OUTPUTS_GUARDRAIL_PATH_FIXED`
 - `C40_1_NO_HARNESS_RERUN`
 - `C40_1_NO_SUPABASE_NO_SQL_NO_RUNTIME`
