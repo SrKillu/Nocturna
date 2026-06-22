@@ -1,0 +1,44 @@
+{
+  "status": "BLOCKED",
+  "checks": [
+    {
+      "id": "repo-root",
+      "status": "PASS",
+      "message": "Repository root matches the approved checkout."
+    },
+    {
+      "id": "planned-commands",
+      "status": "PASS",
+      "message": "No forbidden command is planned."
+    },
+    {
+      "id": "planned-paths",
+      "status": "PASS",
+      "message": "No forbidden path is planned."
+    },
+    {
+      "id": "supabase-temp",
+      "status": "BLOCKED",
+      "message": "supabase/.temp exists; linked/local state must be isolated before execution."
+    },
+    {
+      "id": "env-files",
+      "status": "WARNING",
+      "message": "Environment files exist; the harness will not read them."
+    },
+    {
+      "id": "dry-run",
+      "status": "PASS",
+      "message": "Dry-run is enforced and remote mode is disabled."
+    }
+  ],
+  "warnings": [
+    "env-files-present-not-read"
+  ],
+  "blockers": [
+    "supabase-temp-present"
+  ],
+  "dryRun": true,
+  "timestamp": "2026-06-21T22:24:36.369Z",
+  "repoRoot": "C:\\Users\\ccamp\\Documents\\Codex\\2026-06-13\\files-mentioned-by-the-user-nocturna\\work\\Nocturna-github-clean"
+}

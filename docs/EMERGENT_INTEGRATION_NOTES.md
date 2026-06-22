@@ -131,3 +131,15 @@ STATUS: PENDING_REVIEW
   future test artifacts.
 - Client authority rules and feature-flag boundaries remain unchanged.
 - No privileged service credential may enter browser code.
+
+## C40 Dry-run harness evidence impact
+
+- V2 UI remains mock-backed and runtime is unchanged.
+- Real adapters remain blocked.
+- C40 validates only dry-run planning, redaction and fail-closed behavior.
+- No database policy, schema or relationship query was executed.
+- Evidence confirms no browser or output exposure of privileged credentials.
+- Future adapter work still requires executed disposable grants/RLS evidence.
+
+C40.1 only relocates versioned evidence into `docs/`; adapter and runtime
+boundaries are unchanged.
