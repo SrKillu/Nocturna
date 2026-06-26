@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Loader2, LogOut, Moon, ShieldCheck } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  LogOut,
+  Moon,
+  ShieldCheck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { apiFetch } from '@/lib/api/client';
@@ -22,6 +31,8 @@ interface V2SessionPanelProps {
   session: AuthMeResponse;
 }
 
+const DASHBOARD_HREF = '/v2/dashboard';
+
 type V2SessionProblemCode = 'PROFILE_NOT_FOUND' | 'PROFILE_INACTIVE' | 'UNKNOWN';
 
 interface V2SessionProblemPanelProps {
@@ -30,6 +41,28 @@ interface V2SessionProblemPanelProps {
 
 function membershipLabel(membership: MembershipSummary): string {
   return `${membership.institutionName} · ${membership.roleKey}`;
+}
+
+function isAvailableMembership(membership: MembershipSummary): boolean {
+  return (
+    membership.status === 'active' &&
+    (membership.institutionStatus === 'active' || membership.institutionStatus === 'trial')
+  );
+}
+
+export function getSelectedActiveMembership(
+  session: AuthMeResponse,
+  selectedMembershipId: string | null
+): MembershipSummary | null {
+  const membershipId = selectedMembershipId ?? session.activeMembership?.membershipId ?? null;
+  if (!membershipId) return null;
+
+  return (
+    session.memberships.find(
+      (membership) =>
+        membership.membershipId === membershipId && isAvailableMembership(membership)
+    ) ?? null
+  );
 }
 
 function problemDescription(code: V2SessionProblemCode): string {
@@ -96,11 +129,20 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
   const router = useRouter();
   const [activeId, setActiveId] = useState(session.activeMembership?.membershipId ?? null);
   const [isPending, startTransition] = useTransition();
-  const activeMemberships = session.memberships.filter(
-    (membership) =>
-      membership.status === 'active' &&
-      (membership.institutionStatus === 'active' || membership.institutionStatus === 'trial')
-  );
+  const activeMemberships = session.memberships.filter(isAvailableMembership);
+  const selectedActiveMembership = getSelectedActiveMembership(session, activeId);
+  const activeContextMembership =
+    selectedActiveMembership ??
+    (session.activeMembership
+      ? {
+          membershipId: session.activeMembership.membershipId,
+          institutionId: session.activeMembership.institutionId,
+          institutionName: session.activeMembership.institutionId,
+          roleKey: session.activeMembership.roleKey,
+          status: session.activeMembership.membershipStatus,
+          institutionStatus: session.activeMembership.institutionStatus,
+        }
+      : null);
 
   useEffect(() => {
     if (!session.activeMembership?.membershipId) return;
@@ -159,29 +201,25 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
                   {session.profile.fullName ?? session.profile.email}
                 </CardDescription>
               </div>
-              <Badge variant={session.membershipRequired ? 'secondary' : 'default'}>
-                {session.membershipRequired ? 'Requiere contexto' : 'Contexto activo'}
+              <Badge variant={activeContextMembership ? 'default' : 'secondary'}>
+                {activeContextMembership ? 'Contexto activo' : 'Requiere contexto'}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {session.activeMembership ? (
+            {activeContextMembership ? (
               <div className="rounded-md border bg-muted/30 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
-                  {membershipLabel(
-                    session.memberships.find(
-                      (membership) =>
-                        membership.membershipId === session.activeMembership?.membershipId
-                    ) ?? {
-                      membershipId: session.activeMembership.membershipId,
-                      institutionId: session.activeMembership.institutionId,
-                      institutionName: session.activeMembership.institutionId,
-                      roleKey: session.activeMembership.roleKey,
-                      status: session.activeMembership.membershipStatus,
-                      institutionStatus: session.activeMembership.institutionStatus,
-                    }
-                  )}
+                  {membershipLabel(activeContextMembership)}
+                </div>
+                <div className="mt-4">
+                  <Button asChild>
+                    <Link href={DASHBOARD_HREF}>
+                      Continuar al dashboard
+                      <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+                    </Link>
+                  </Button>
                 </div>
               </div>
             ) : null}
@@ -189,7 +227,7 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
             {activeMemberships.length > 0 ? (
               <div className="grid gap-3">
                 {activeMemberships.map((membership) => {
-                  const selected = activeId === membership.membershipId;
+                  const selected = activeContextMembership?.membershipId === membership.membershipId;
                   return (
                     <div
                       key={membership.membershipId}
