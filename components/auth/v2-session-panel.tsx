@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Loader2, LogOut, Moon, ShieldCheck } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  LogOut,
+  Moon,
+  ShieldCheck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { apiFetch } from '@/lib/api/client';
@@ -124,7 +133,10 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
 
     setActiveId(membershipId);
     toast.success('Contexto activado');
-    startTransition(() => router.refresh());
+    startTransition(() => {
+      router.replace('/v2/dashboard');
+      router.refresh();
+    });
   }
 
   async function logout(): Promise<void> {
@@ -182,6 +194,14 @@ export function V2SessionPanel({ session }: V2SessionPanelProps) {
                       institutionStatus: session.activeMembership.institutionStatus,
                     }
                   )}
+                </div>
+                <div className="mt-4">
+                  <Button asChild>
+                    <Link href="/v2/dashboard">
+                      Continuar al dashboard
+                      <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+                    </Link>
+                  </Button>
                 </div>
               </div>
             ) : null}
